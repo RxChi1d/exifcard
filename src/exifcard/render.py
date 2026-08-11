@@ -108,6 +108,12 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
                 "width, so it will look proportionally large"
             )
 
+        if encode.source_bit_depth(photo_path) > 8:
+            notes.append(
+                "the source carries more than 8 bits per channel; the card is composited "
+                "in 8 bits, so tonal precision is reduced"
+            )
+
         absent = glyphs.missing(
             data.brand_label, data.body, data.lens_brand, data.lens, data.exposure, data.timeline
         )

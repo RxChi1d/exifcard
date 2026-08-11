@@ -75,6 +75,22 @@ def jpegtran_available() -> bool:
     return shutil.which("jpegtran") is not None
 
 
+def source_bit_depth(photo_path: Path) -> int:
+    """Bits per channel in the source file.
+
+    Pillow composites in 8 bits, so a 10-bit HEIF from a recent camera is
+    narrowed on the way in. That is a real loss and the caller says so out
+    loud rather than letting it pass unmentioned.
+    """
+    if photo_path.suffix.lower() not in (".heic", ".heif"):
+        return 8
+    try:
+        frame = pillow_heif.open_heif(str(photo_path), convert_hdr_to_8bit=False)[0]
+    except Exception:
+        return 8
+    return 16 if ";16" in frame.mode else 8
+
+
 def can_composite_losslessly(photo: Image.Image) -> tuple[bool, str]:
     """Whether the photo can be dropped into the card without re-encoding.
 
