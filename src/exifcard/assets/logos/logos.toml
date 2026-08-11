@@ -1,0 +1,82 @@
+# Camera brand logos.
+#
+# Every file here is a wordmark taken from Wikimedia Commons under a public
+# domain tag (PD-textlogo: plain lettering is below the threshold of
+# originality, so no copyright subsists). The marks are still trademarks; this
+# tool uses them nominatively, to identify the camera a photo was taken with.
+#
+# Rules are matched top to bottom. `make` is compared against the EXIF Make
+# field after normalization (uppercased, corporate suffixes stripped).
+# `model_prefix`, when present, must also match the start of the EXIF Model
+# field -- Ricoh Imaging ships both RICOH- and PENTAX-branded bodies under one
+# Make value, and the Model field is what tells them apart.
+#
+# A brand with no rule here falls back to its name set in type, which is a
+# supported layout, not a failure. Nikon, Leica and OM System are deliberately
+# in that group: Commons carries no usable wordmark for them, only square
+# emblems that turn into an unreadable 11px blob at the size the card uses.
+
+[[logo]]
+make = "SONY"
+file = "sony.svg"
+source = "https://commons.wikimedia.org/wiki/File:Sony_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "FUJIFILM"
+file = "fujifilm.svg"
+source = "https://commons.wikimedia.org/wiki/File:Fujifilm_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "CANON"
+file = "canon.svg"
+source = "https://commons.wikimedia.org/wiki/File:Canon_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+# Panasonic cameras carry LUMIX branding, but write "Panasonic" as the Make.
+[[logo]]
+make = "PANASONIC"
+file = "lumix.svg"
+source = "https://commons.wikimedia.org/wiki/File:Lumix_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "OLYMPUS"
+file = "olympus.svg"
+source = "https://commons.wikimedia.org/wiki/File:Olympus_Corporation_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+# Ricoh Imaging: the Model field carries the consumer brand.
+[[logo]]
+make = "RICOH"
+model_prefix = "PENTAX"
+file = "pentax.svg"
+source = "https://commons.wikimedia.org/wiki/File:Pentax_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "RICOH"
+model_prefix = "RICOH"
+file = "ricoh.svg"
+source = "https://commons.wikimedia.org/wiki/File:Ricoh_logo_2005.svg"
+license = "Public domain (PD-textlogo)"
+
+# Older Pentax bodies wrote PENTAX as the Make directly.
+[[logo]]
+make = "PENTAX"
+file = "pentax.svg"
+source = "https://commons.wikimedia.org/wiki/File:Pentax_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "HASSELBLAD"
+file = "hasselblad.svg"
+source = "https://commons.wikimedia.org/wiki/File:Hasselblad_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "SIGMA"
+file = "sigma.svg"
+source = "https://commons.wikimedia.org/wiki/File:SIGMA_CORPORATION.svg"
+license = "Public domain (PD-textlogo)"

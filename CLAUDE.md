@@ -4,83 +4,86 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`exifcard` builds a **local CLI tool** that turns a photo plus its EXIF data into a finished card image: the photo on top, a metadata strip below, written out as a single flat image file for personal album archiving (Immich) and occasional sharing.
+`exifcard` is a **local CLI tool** that turns a photo plus its EXIF data into a finished card image: the photo on top, a metadata strip below, written out as one flat image file for personal album archiving (Immich) and occasional sharing.
 
-Scope boundary: a command-line tool, run locally, over local files. **Not** an API server, not a web service, not a GUI. Do not add HTTP endpoints, a daemon, or a browser UI. A headless browser is acceptable only as an internal rendering engine, never as a served interface.
+Scope boundary: a command-line tool, run locally, over local files. **Not** an API server, not a web service, not a GUI. Do not add HTTP endpoints, a daemon, or a browser UI. Chromium is present strictly as an internal text renderer.
 
-Status: **implementation has not started.** There is no package manager, build step, test suite, or linter yet, and the stack is still open — Python/Pillow, Node/sharp, canvas, and headless-browser rendering are all on the table.
+## Commands
 
-## Card layout
-
-Two vertical sections, no other structure:
-
-```
-┌─────────────────────────────────────┐
-│              PHOTO                  │  full card width
-├─────────────────────────────────────┤
-│ [logo]│Body        56mm · f/1.4 ... │  row 1
-│ Lens brand  Lens model      [signature]  row 2
-│ 2026.03.14 · Kyoto                  │
-└─────────────────────────────────────┘
+```sh
+uv sync                                  # install, including dev group
+uv run playwright install chromium       # once, before anything renders
+uv run pytest                            # full suite, ~4s
+uv run pytest tests/test_names.py -k brand   # one file / one test
+uv run exifcard render <path> --dry-run  # see what a run would write
 ```
 
-All values are defined at a **760px design baseline** and the whole card scales uniformly to the output width: multiply every length — type size, letter-spacing, padding, logo height, signature width — by the same factor. Default output width is the photo's native long edge. Info rows must never wrap; minimum usable card width is ~380px.
+Tests that need a browser call `pytest.importorskip("playwright.sync_api")`, so the pure-logic tests still run without it.
 
-**Type and color at the 760px baseline**
+## Architecture
 
-| Element | Font | Size | Tracking | Color |
-|---|---|---|---|---|
-| Body model | Archivo 500 | 13.5px | .04em | `#26241f` |
-| Exposure readout | JetBrains Mono 400 | 12.5px | .1em | `#33302b` |
-| Lens model | Archivo 400 | 12.5px | .03em | `#6d665e` |
-| Lens brand | Archivo 400 | 12.5px | .1em | `#8a8279` |
-| Date / location | JetBrains Mono 400 | 9px | .1em | `#b3ada4` |
+The photo and the info strip never overlap, which is the hinge the whole design turns on: they are produced by different engines and joined at the end.
 
-Paper is `#faf8f4` (warm, default) or `#ffffff`. The logo divider rule is `#dcd7ce`, 1px wide and 12px tall. Spacing: 22px above and below the info strip, 20px at its sides and between columns, 14px between the two rows, 11px between logo and body model, 9px between the two lines of row 2's left column. Logo height 11px at opacity .88; signature width 108px (adjustable 70–180) at opacity .7, bottom-aligned with the text on its left.
+```
+metadata.py  EXIF -> display strings        names.py   gear display-name tables
+     |                                      logos.py   Make/Model -> bundled wordmark
+     v
+strip.py     Chromium renders ONLY the strip, at the card's real pixel width
+     |
+     v
+compose.py   photo pasted at native size + strip below   (numpy/Pillow)
+     |
+     v
+encode.py    per-format encoders, including the jpegtran lossless path
+```
 
-Two border modes: `bleed` (default, for screen — photo touches the top and both sides, paper only below) and `equal` (for print — 18px on all four sides, plus a `rgba(40,34,26,.09)` inset hairline on the photo so light images do not dissolve into the paper).
+`render.py` sequences those for one photo; `cli.py` handles batching, prompts and progress. `layout.py` holds every design constant at the 760px baseline.
 
-**Invariants.** These are settled design decisions, not defaults — changing one is a design change, not a refactor:
+Two consequences worth keeping in mind before changing anything here:
 
-- The photo is the subject. The largest type in the info strip is 13.5px; nothing is promoted to a heading.
+- **The photo never enters the browser.** That is what keeps its pixels, ICC profile and bit depth intact, and what keeps a 40MP card from hitting Chromium's surface limits. Rendering the whole card in the browser would be simpler and would silently degrade every photo.
+- **Scaling happens through `device_scale_factor`, not by pre-multiplying lengths.** Every value in `layout.py` and in the generated HTML stays at its baseline number.
+
+## Design rules
+
+These are settled decisions, not defaults. Changing one is a design change.
+
+- The photo is the subject: largest type in the strip is 13.5px at the 760px baseline. Nothing is promoted to a heading.
 - Gear before exposure. Row 1: logo + body model left, exposure readout right. Row 2: lens details and date/location left, signature right.
 - No dividers except the single 1px rule between logo and body model. Grouping comes from columns and line spacing alone.
-- Only the camera body gets a graphic logo; lenses are always text. Two logos fight each other.
-- The info strip height is fixed and does not vary with photo aspect ratio (3:2, 1:1, 4:5, 2:3 all share it), so an album stays uniform.
+- Only the camera body gets a graphic logo; lenses are always text. Lens brand appears only when it differs from the body's.
+- **The strip height is fixed** — independent of the photo's aspect ratio *and* of how much metadata a photo carries. `layout.ROW1_HEIGHT`, `ROW2_HEIGHT` and `LINE_HEIGHT` exist for this reason: leaving line boxes to font metrics made the strip a fraction of a pixel taller when a lens name was present, and an album stopped stacking evenly.
 - No border-radius, no shadows, no gradients, no accent colors.
+- **Missing values are omitted, never replaced.** No `Unknown`, no dash, no `N/A`. The layout does not collapse to fill the gap.
+- Any aspect ratio is accepted and the photo is never cropped. The four ratios in the demo images are validated examples, not a supported list.
 
-## Data rules
+## Data handling
 
-| Field | EXIF source | Rendered as |
-|---|---|---|
-| Brand logo | `Make` | local logo file |
-| Body model | `Model` | mapped display name |
-| Lens model | `LensModel` | mapped display name |
-| Focal length | `FocalLength` | `56mm` (integer, no decimals) |
-| Aperture | `FNumber` | `f/1.4` |
-| Shutter | `ExposureTime` | `1/250s`; `2s` at or above one second |
-| ISO | `ISOSpeedRatings` | `ISO 400` |
-| Date | `DateTimeOriginal` | `2026.03.14` (zero-padded) |
-| Location | GPS reverse lookup or manual | always English, optional |
+- **EXIF strings are NUL-padded by cameras.** `metadata.clean()` strips them; `.strip()` alone does not, and every table lookup silently misses. Fujifilm pads `LensModel` with 29 NUL bytes.
+- Gear tables are an override list, never an allow list: unregistered gear is displayed exactly as EXIF wrote it.
+- `Make` is normalized by stripping legal-entity noise (`NIKON CORPORATION` → `NIKON`). Ricoh ships both RICOH- and PENTAX-branded bodies under one `Make`, so `logos.toml` also matches on a `Model` prefix.
+- Pillow reports Sony JPEGs as `MPO` because of the multi-picture block. Anything checking for JPEG must accept both.
+- Output EXIF is copied wholesale by default, **except `Orientation`, which is forced to 1** — rotation is baked into the pixels, and leaving the flag would make viewers rotate the finished card.
 
-The exposure readout joins its parts with a space-padded middle dot: `56mm · f/1.4 · 1/250s · ISO 400`. Date and location use the same separator.
+## Output policy
 
-**Display names.** EXIF gear strings are often internal codes (`ILCE-7M4`) or bloated full names (`TAMRON 70-180mm F/2.8 Di III VC VXD G2`). The contract: display the raw string **as-is by default**, and keep separate user-editable override tables for bodies and lenses that rename only the entries explicitly registered in them. Never build a lookup that fails closed on unknown gear.
-
-**Missing values** remove an element without changing any alignment or spacing:
-
-- No location — the line keeps the date alone, same position and style.
-- Lens shares the body's brand — the brand text is omitted, so it never repeats.
-- No signature — the element is dropped; row 2's left column does not recenter or stretch.
+- Format follows the input unless `--format` overrides it.
+- JPEG re-encodes with the **source's own quantization tables and chroma subsampling**, not a quality number. Measured on a 33MP file: `quality=95` gives 6.06MB from an 18.76MB source (mean deviation 1.08); source tables give 18.94MB (mean deviation 0.23).
+- HEIC needs `GRID_TILE_SIZE` set or libheif produces an undecodable file above roughly 28MP. Tiling costs about 1% in size.
+- `--lossless` uses `jpegtran -drop` and requires photo dimensions that are multiples of 16. It raises rather than falling back: a promise that silently degrades is worse than an error.
+- Default output width is the photo's native resolution. Compression is invisible, resolution loss is not.
 
 ## Assets
 
-Brand logos and the signature are transparent PNGs cropped tight to the ink boundary — internal padding breaks alignment. Logos are aligned by `height`, never `width`. If no logo file matches the EXIF `Make`, fall back to text (Archivo 500, same size as the body model, `letter-spacing:.1em`, `#26241f`).
+Everything the program reads at runtime lives in `src/exifcard/assets/` so it ships in the wheel. Anything only humans look at lives in `docs/`.
 
-`signature.png` is a real handwritten signature scan: **private, never commit it**, and treat rendered cards as private too since the signature is burned into the image. `.gitignore` covers both.
+- `assets/fonts/` — Archivo, JetBrains Mono, Noto Sans, with their OFL texts. **Archivo has no Greek alpha**, and Sony bodies display as `α7C II`; Noto Sans is bundled as the fallback that covers it.
+- `assets/logos/` — public-domain wordmarks with provenance in `logos.toml`. Nikon, Leica and OM System are deliberately absent: Commons carries only square emblems for them, which become an unreadable blob at 11px. They use the text fallback.
+
+`test-photos/` holds real camera files and is gitignored — they carry GPS and are not ours to publish.
 
 ## Conventions
 
-Write code comments and config-file comments in English. Fonts are Archivo (proportional grotesk) and JetBrains Mono; no serifs. If a target environment lacks them, substitute a neutral grotesk — avoiding Inter/Roboto/Arial — and any monospace such as IBM Plex Mono.
+Write code comments and config-file comments in English.
 
-Git is initialized on branch `main`.
+Git is on branch `feat/initial-implementation`; `main` holds only the initial docs commit.
