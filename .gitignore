@@ -1,0 +1,8 @@
+# Scanned handwritten signature, private. Never commit it, wherever it lives.
+signature.png
+**/signature.png
+
+# Rendered cards have the signature burned into the image, so they stay out too.
+*.out.png
+*.out.jpg
+output/
