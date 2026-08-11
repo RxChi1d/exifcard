@@ -11,6 +11,7 @@ dependencies = [
     "playwright>=1.62.0",
     "numpy>=2.0.0",
     "typer>=0.27.0",
+    "fonttools>=4.55.0",
 ]
 
 [project.scripts]
@@ -29,7 +30,6 @@ packages = ["src/exifcard"]
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
-    "fonttools>=4.55.0",
 ]
 
 [tool.pytest.ini_options]

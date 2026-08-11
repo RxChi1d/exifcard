@@ -8,7 +8,7 @@ from pathlib import Path
 import pillow_heif
 from PIL import Image
 
-from . import compose, encode, layout, logos, metadata, strip
+from . import compose, encode, glyphs, layout, logos, metadata, strip
 
 pillow_heif.register_heif_opener()
 
@@ -107,6 +107,12 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
                 f"extreme aspect ratio {aspect:.2f}:1 -- the info strip scales with card "
                 "width, so it will look proportionally large"
             )
+
+        absent = glyphs.missing(
+            data.brand_label, data.body, data.lens_brand, data.lens, data.exposure, data.timeline
+        )
+        if absent:
+            notes.append(glyphs.describe(absent))
 
         logo = logos.find(data.make_key, data.body)
         spec = strip.StripSpec(

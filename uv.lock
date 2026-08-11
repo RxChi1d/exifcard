@@ -25,6 +25,7 @@ name = "exifcard"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "fonttools" },
     { name = "numpy" },
     { name = "pillow" },
     { name = "pillow-heif" },
@@ -34,12 +35,12 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "fonttools" },
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "fonttools", specifier = ">=4.55.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "pillow", specifier = ">=12.0.0" },
     { name = "pillow-heif", specifier = ">=1.5.0" },
@@ -48,10 +49,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "fonttools", specifier = ">=4.55.0" },
-    { name = "pytest", specifier = ">=8.0.0" },
-]
+dev = [{ name = "pytest", specifier = ">=8.0.0" }]
 
 [[package]]
 name = "fonttools"
