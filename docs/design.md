@@ -113,4 +113,4 @@ A mark is only bundled if it survives 11px on warm paper. Nothing's is white let
 - **8 bits per channel.** Compositing happens in 8-bit RGB, so a 10-bit HEIF is narrowed on the way in. The run says so rather than narrowing silently. A 16-bit pipeline is possible but would need format-specific encode paths.
 - **No RAW.** The card is made at the end of a workflow, after the picture has been chosen and graded, where the file is already a JPEG or HEIF. Reading RAW would pull the tool into developing, which other software already does.
 - **HEIC above ~28MP needs tiling**, which is applied automatically. Without it libheif writes a file it cannot read back.
-- **Windows is untested.** macOS and Linux are exercised; Linux runs in CI on every push.
+- **`--lossless` needs `jpegtran` on PATH**, which has no standard package on Windows. The flag reports that rather than failing obscurely; everything else works there.

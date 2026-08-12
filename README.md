@@ -156,7 +156,7 @@ Fonts and brand marks ship with the package, so a card renders identically on an
 
 ## Requirements and limits
 
-Python 3.12 or newer. Exercised on macOS and Linux; Linux runs in CI on every push. Windows is untested.
+Python 3.12 or newer. Linux, macOS and Windows all run in CI on every push.
 
 Reads and writes JPEG, PNG and HEIC. RAW is out of scope — the card is made after a picture has been chosen and graded. Compositing is 8-bit, so a 10-bit HEIF is narrowed on the way in and says so.
 

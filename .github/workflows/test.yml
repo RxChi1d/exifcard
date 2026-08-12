@@ -7,7 +7,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -20,23 +24,29 @@ jobs:
       # The browser is a separate download, not a wheel, so it gets its own
       # cache keyed on the pinned Playwright version.
       - id: playwright-version
+        shell: bash
         run: echo "version=$(uv run python -c 'import playwright; print(playwright.__version__)')" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v4
         id: playwright-cache
         with:
-          path: ~/.cache/ms-playwright
+          path: ${{ runner.os == 'Windows' && '~\AppData\Local\ms-playwright' || runner.os == 'macOS' && '~/Library/Caches/ms-playwright' || '~/.cache/ms-playwright' }}
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       # Deliberately the command the README tells people to run, so CI fails if
       # that path ever stops working. --with-deps pulls Chromium's system
-      # libraries, without which it downloads but will not start on Linux.
-      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+      # libraries and applies to Linux only.
+      - if: steps.playwright-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: uv run exifcard install-browser --with-deps
+      - if: steps.playwright-cache.outputs.cache-hit != 'true' && runner.os != 'Linux'
+        run: uv run exifcard install-browser
 
-      - run: sudo apt-get install -y libjpeg-turbo-progs
+      # jpegtran backs --lossless. It is optional, and the tests that use it
+      # skip when it is absent, so only Linux installs it here.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get install -y libjpeg-turbo-progs
 
-      # Golden tests compare pixels, and text rasterizes differently on Linux
-      # than on the machine the references were made on. They stay a local
-      # check; everything that guards behaviour runs here.
+      # Golden tests compare pixels, and text rasterizes differently across
+      # platforms. They stay a local check; everything that guards behaviour
+      # runs here.
       - run: uv run pytest -m "not golden" -q
