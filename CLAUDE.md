@@ -24,6 +24,8 @@ Tests that need a browser call `pytest.importorskip("playwright.sync_api")`, so 
 
 ## Architecture
 
+`docs/design.md` holds the reasoning and the measurements behind the decisions summarised here. Read it before overturning any of them — most were settled against evidence rather than preference.
+
 The photo and the info strip never overlap, which is the hinge the whole design turns on: they are produced by different engines and joined at the end.
 
 ```
@@ -44,6 +46,7 @@ encode.py    per-format encoders, including the jpegtran lossless path
 Two consequences worth keeping in mind before changing anything here:
 
 - **The photo never enters the browser.** That is what keeps its pixels, ICC profile and bit depth intact, and what keeps a 40MP card from hitting Chromium's surface limits. Rendering the whole card in the browser would be simpler and would silently degrade every photo.
+- **The browser is not replaceable by Pillow**, which is the question this design invites. Pillow has no letter-spacing API — `ImageDraw.text`'s `spacing` is line spacing — and the design tracks every text element. Its default layout engine also ignores the font's GPOS table (Raqm is absent from the standard wheels), so text sets without the kerning the typeface specifies: measured on Archivo at 100px, Chromium renders "AV" at 127.33px against 130.16px drawn per character, while Pillow gives 138.00px either way.
 - **Scaling happens through `device_scale_factor`, not by pre-multiplying lengths.** Every value in `layout.py` and in the generated HTML stays at its baseline number.
 
 ## Design rules
@@ -74,7 +77,7 @@ These are settled decisions, not defaults. Changing one is a design change.
 - Format follows the input unless `--format` overrides it.
 - JPEG defaults to `quality=95` and carries over the **source's chroma subsampling** only. Do not reuse the source's quantization tables here: on a 33MP file that yields 19.6MB from an 18.8MB original -- a "card" larger than the photo, which is the opposite of what a card is for. Those tables belong solely to the `--lossless` path, where jpegtran needs the canvas quantized to match the coefficients it drops in. `tests/test_render.py` pins this, because every other check only asks whether the picture looks right, and the uncompressed version looked better.
 - HEIC needs `GRID_TILE_SIZE` set or libheif produces an undecodable file above roughly 28MP. Tiling costs about 1% in size.
-- `--lossless` uses `jpegtran -drop` and requires photo dimensions that are multiples of 16. It raises rather than falling back: a promise that silently degrades is worse than an error.
+- `--lossless` uses `jpegtran -drop` and requires photo dimensions that are multiples of 16. It raises rather than falling back: a promise that silently degrades is worse than an error. The external binary is unavoidable, not a shortcut: bit-exactness means never decoding, Pillow exposes quantization tables but not coefficients, and the pure-Python options are dead ends (`jpeglib` ships cp38 wheels only, `jpegtran-cffi` ships none). Re-check before replacing it.
 - Default output width is the photo's native resolution. Compression is invisible, resolution loss is not.
 
 ## Assets
