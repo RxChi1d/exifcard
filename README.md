@@ -22,10 +22,24 @@ The layout is the same in every one — same proportions, same alignment, no sep
 
 ```sh
 uv tool install git+https://github.com/RxChi1d/exifcard
-playwright install chromium
+exifcard install-browser
 ```
 
-Chromium renders the info strip — see [How it works](#how-it-works). Optionally install `jpegtran` (macOS `brew install jpeg-turbo`, Debian/Ubuntu `apt install libjpeg-turbo-progs`) if you want `--lossless`.
+`exifcard` is a standalone command you point at photo folders, so it belongs in your tools rather than in a project's dependencies.
+
+The second line downloads the Chromium build that renders the info strip — see [How it works](#how-it-works). It is a command of its own because an installed tool exposes only its own entry point, so Playwright's usual `playwright install chromium` is not on your PATH.
+
+Optionally install `jpegtran` (macOS `brew install jpeg-turbo`, Debian/Ubuntu `apt install libjpeg-turbo-progs`) if you want `--lossless`.
+
+### From source
+
+```sh
+git clone https://github.com/RxChi1d/exifcard && cd exifcard
+uv sync
+uv run playwright install chromium
+uv run exifcard render photo.jpg
+uv run pytest
+```
 
 ## Use
 
