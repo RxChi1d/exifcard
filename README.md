@@ -12,11 +12,11 @@ The same layout across four aspect ratios and both border modes. The photos are 
 |---|---|
 | ![bleed mode](docs/images/demo-bleed.png) | ![equal mode](docs/images/demo-equal.png) |
 
-| 1:1 | 4:5 | 2:3 |
-|---|---|---|
-| ![1:1](docs/images/demo-square-1x1.png) | ![4:5](docs/images/demo-portrait-4x5.png) | ![2:3](docs/images/demo-portrait-2x3.png) |
+| 1:1 | 4:5 | 2:3 | 9:16 |
+|---|---|---|---|
+| ![1:1](docs/images/demo-square-1x1.png) | ![4:5](docs/images/demo-portrait-4x5.png) | ![2:3](docs/images/demo-portrait-2x3.png) | ![9:16](docs/images/demo-9x16.png) |
 
-The info strip is identical in all four: same type sizes, same padding, same alignment. It does not move with the photo's proportions, so a whole album stacks evenly.
+The layout is the same in every one — same proportions, same alignment, no separate treatment for portrait. Only the type size is compensated, so that a portrait card read at the same height as a landscape one has lettering of the same apparent size.
 
 ## Install
 
@@ -72,7 +72,7 @@ signature = "~/Pictures/private/signature.png"
 "ILCE-7CM2" = "α7C II"
 
 [gear.lens]
-"TAMRON 25-200mm F2.8-5.6 A075 E" = "25-200mm F2.8-5.6"
+"TAMRON 25-200mm F2.8-5.6 A075 E" = "25-200mm F2.8-5.6 Di III RXD"
 ```
 
 Gear names appear exactly as EXIF reports them unless a table renames them, so an unregistered camera still produces a correct card.
@@ -114,6 +114,22 @@ Chromium renders only the strip        Pillow assembles the card
 ```
 
 The browser is there for text: letter-spacing, baseline alignment and edge-to-edge distribution at exactly the values the design specifies, rather than reimplemented approximately in a drawing library. Because it only ever sees the strip, the photo is never re-sampled, never converted between colour spaces, and never limited by the browser's maximum surface size.
+
+### Why portrait cards are not smaller
+
+The strip is laid out on its own canvas of width `D` and then scaled to the card, rather than scaled from the card's width directly. Scaling from card width alone punishes portrait photos: their long edge is the height, so the card is narrower and the type shrinks with it — a 9:16 phone shot ended up with lettering half the size of a landscape frame's.
+
+```
+a = photo height / photo width
+D = clamp(604 / a, 450, 760)      # narrower canvas → larger type
+strip scale = card width / D
+```
+
+Landscape lands on 760 and is untouched, so its output is unchanged to the pixel.
+
+A long body model next to a long lens name can overrun the row. Rather than wrap, truncate or abbreviate, the card gives ground in two steps: first it tightens — the exposure readout's tracking and the gap between the two column groups — which costs no type size at all; only if that is still not enough does the canvas widen, shrinking the block evenly. Both widths are measured in the browser from the real text, per photo, so nothing carries over from the previous card in a batch.
+
+This is also why the display-name tables are not for shortening. They exist to turn an internal code into the product's actual name (`ILCE-7CM2` → `α7C II`); deciding which words of a name matter is not the tool's call.
 
 Fonts (Archivo, JetBrains Mono, Noto Sans) ship with the package, so a card renders identically on any machine. Layout is defined once at a 760px baseline and scaled as a whole, so text never reflows between output sizes.
 

@@ -52,7 +52,9 @@ These are settled decisions, not defaults. Changing one is a design change.
 - Gear before exposure. Row 1: logo + body model left, exposure readout right. Row 2: lens details and date/location left, signature right.
 - No dividers except the single 1px rule between logo and body model. Grouping comes from columns and line spacing alone.
 - Only the camera body gets a graphic logo; lenses are always text. Lens brand appears only when it differs from the body's.
-- **The strip height is fixed** — independent of the photo's aspect ratio *and* of how much metadata a photo carries. `layout.ROW1_HEIGHT`, `ROW2_HEIGHT` and `LINE_HEIGHT` exist for this reason: leaving line boxes to font metrics made the strip a fraction of a pixel taller when a lens name was present, and an album stopped stacking evenly.
+- **The strip height is fixed in design units** — independent of how much metadata a photo carries. `layout.ROW1_HEIGHT`, `ROW2_HEIGHT` and `LINE_HEIGHT` exist for this reason: leaving line boxes to font metrics made the strip a fraction of a pixel taller when a lens name was present, and an album stopped stacking evenly.
+- **Type size is compensated for portrait, layout is not.** The strip is laid out on a canvas of width `D = clamp(604 / aspect, 450, 760)` and scaled by `card width / D`, so a narrow card gets proportionally larger type instead of shrinking with its own width. Landscape lands on 760 and must stay pixel-identical — `tests/test_canvas.py` asserts that against the golden image. There is no separate portrait layout: crowding comes from the card being narrow, not from its orientation.
+- **Long names never wrap, truncate or abbreviate.** `strip.fit` measures the real text in the browser and gives ground in two steps: tighten (exposure tracking, column gap), then widen the canvas. It must stay bidirectional — a one-way ratchet would leave a card shrunken because the previous photo in the batch had a long lens name.
 - No border-radius, no shadows, no gradients, no accent colors.
 - **Missing values are omitted, never replaced.** No `Unknown`, no dash, no `N/A`. The layout does not collapse to fill the gap.
 - Any aspect ratio is accepted and the photo is never cropped. The four ratios in the demo images are validated examples, not a supported list.
@@ -60,7 +62,7 @@ These are settled decisions, not defaults. Changing one is a design change.
 ## Data handling
 
 - **EXIF strings are NUL-padded by cameras.** `metadata.clean()` strips them; `.strip()` alone does not, and every table lookup silently misses. Fujifilm pads `LensModel` with 29 NUL bytes.
-- Gear tables are an override list, never an allow list: unregistered gear is displayed exactly as EXIF wrote it.
+- Gear tables are an override list, never an allow list: unregistered gear is displayed exactly as EXIF wrote it. They map an internal code onto the product's real name and are **not** a place to shorten anything — length is `strip.fit`'s problem.
 - `Make` is normalized by stripping legal-entity noise (`NIKON CORPORATION` → `NIKON`). Ricoh ships both RICOH- and PENTAX-branded bodies under one `Make`, so `logos.toml` also matches on a `Model` prefix.
 - Pillow reports Sony JPEGs as `MPO` because of the multi-picture block. Anything checking for JPEG must accept both.
 - Output EXIF is copied wholesale by default, **except `Orientation`, which is forced to 1** — rotation is baked into the pixels, and leaving the flag would make viewers rotate the finished card.

@@ -42,12 +42,16 @@ def brand_label(make_key: str, raw_make: str) -> str:
     return BRAND_LABELS.get(make_key, raw_make)
 
 
+# These map an internal code onto the product's actual name. They are not for
+# shortening: a name that will not fit is handled by the canvas adaptation in
+# strip.fit, which gives ground evenly rather than deciding on the owner's
+# behalf which words matter.
 LENS_NAMES = {
-    "TAMRON 25-200mm F2.8-5.6 A075 E": "25-200mm F2.8-5.6",
-    "17-70mm F/2.8 DiIII-A VC RXD B070X": "17-70mm F2.8 Di III-A",
-    "TAMRON 70-180mm F/2.8 Di III VC VXD G2": "70-180mm F2.8 G2",
+    "TAMRON 25-200mm F2.8-5.6 A075 E": "25-200mm F2.8-5.6 Di III RXD",
+    "17-70mm F/2.8 DiIII-A VC RXD B070X": "17-70mm F2.8 Di III-A VC RXD",
+    "TAMRON 70-180mm F/2.8 Di III VC VXD G2": "70-180mm F2.8 Di III VC VXD G2",
     "XF33mmF1.4 R LM WR": "XF 33mm F1.4 R LM WR",
-    "XF16-55mmF2.8 R LM WR": "XF 16-55mm F2.8",
+    "XF16-55mmF2.8 R LM WR": "XF 16-55mm F2.8 R LM WR",
 }
 
 # Some third-party lenses omit the maker from LensModel entirely -- Tamron's

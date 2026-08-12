@@ -72,7 +72,7 @@ out = "outputs"              # default output root, relative to where you run th
 "ILCE-7CM2" = "α7C II"
 
 [gear.lens]
-"TAMRON 25-200mm F2.8-5.6 A075 E" = "25-200mm F2.8-5.6"
+"TAMRON 25-200mm F2.8-5.6 A075 E" = "25-200mm F2.8-5.6 Di III RXD"
 
 # For third-party lenses whose LensModel omits the maker's name.
 [gear.lens_brand]

@@ -21,7 +21,7 @@ def test_third_party_lens_brand_is_shown():
         "TAMRON 25-200mm F2.8-5.6 A075 E", "SONY", names.LENS_NAMES
     )
     assert brand == "TAMRON"
-    assert model == "25-200mm F2.8-5.6"
+    assert model == "25-200mm F2.8-5.6 Di III RXD"
 
 
 def test_own_brand_lens_is_not_labelled():
@@ -37,7 +37,7 @@ def test_declared_brand_covers_lenses_that_omit_their_maker():
         "17-70mm F/2.8 DiIII-A VC RXD B070X", "FUJIFILM", names.LENS_NAMES
     )
     assert brand == "TAMRON"
-    assert model == "17-70mm F2.8 Di III-A"
+    assert model == "17-70mm F2.8 Di III-A VC RXD"
 
 
 def test_brand_prefix_is_peeled_when_there_is_no_table_entry():

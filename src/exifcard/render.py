@@ -95,11 +95,6 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
             else layout.card_width_for_photo(photo.width, options.frame)
         )
         card_width_px = round(card_width)
-        if card_width_px < layout.MIN_CARD_WIDTH:
-            notes.append(
-                f"card width {card_width_px}px is below the {layout.MIN_CARD_WIDTH}px "
-                "minimum; the info rows may crowd"
-            )
 
         aspect = photo.width / photo.height
         if aspect > 3 or aspect < 1 / 3:
@@ -129,7 +124,9 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
             logo=logo,
             signature=options.signature,
             signature_width=options.signature_width,
+            canvas_width=layout.canvas_width_for(photo.width, photo.height),
         )
+        spec = strip.fit(spec, browser=browser)
         strip_image = strip.render(spec, browser=browser)
 
         lossless = False

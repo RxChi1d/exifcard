@@ -18,3 +18,6 @@ signature.png
 *.out.png
 *.out.jpg
 output/
+
+# macOS
+.DS_Store

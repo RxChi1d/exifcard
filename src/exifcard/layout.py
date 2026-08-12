@@ -11,8 +11,24 @@ from dataclasses import dataclass
 
 BASELINE_WIDTH = 760.0
 
-# Below this the info rows start to crowd; the spec puts the floor at 380px.
-MIN_CARD_WIDTH = 380
+# The info strip is laid out on its own canvas of width D and then scaled to
+# the card, rather than scaling straight from the card's width. Deriving the
+# scale from card width alone punishes portrait photos: their long edge is the
+# height, so the card is narrower and the type shrinks with it -- a 9:16 phone
+# shot ends up with lettering half the size of a landscape frame's.
+#
+#   a = photo height / photo width
+#   D = clamp(PORTRAIT_REFERENCE / a, CANVAS_MIN, CANVAS_MAX)
+#   info scale = card width / D
+#
+# A smaller D means larger type. CANVAS_MAX keeps landscape exactly as it was;
+# PORTRAIT_REFERENCE is tuned so a portrait card viewed at the same height
+# reads at the same size as a landscape one; CANVAS_MIN is the narrowest the
+# info row itself fits in (exposure line ~271 + left group ~97 + column gap 20
+# + side padding 40).
+CANVAS_MAX = 760.0
+CANVAS_MIN = 450.0
+PORTRAIT_REFERENCE = 604.0
 
 PAPER = {"warm": "#faf8f4", "white": "#ffffff"}
 
@@ -67,6 +83,13 @@ TRACK_BODY = 0.04
 SIZE_EXPOSURE = 12.5
 TRACK_EXPOSURE = 0.1
 
+# First response to an info row that will not fit: pull the exposure readout's
+# tracking in and narrow the gap between the two column groups. Worth about
+# 8-10% of the width, and it costs nothing in type size, so it is always tried
+# before widening the canvas.
+TRACK_EXPOSURE_TIGHT = 0.04
+ROW_GROUP_GAP_TIGHT = 12.0
+
 # Row 2: lens and timestamp stacked on the left, signature on the right.
 ROW_GAP = 14.0
 ROW2_LINE_GAP = 9.0
@@ -94,6 +117,17 @@ SEPARATOR = " · "
 def scale_for(card_width: float) -> float:
     """Scale factor that maps baseline lengths onto a card of this width."""
     return card_width / BASELINE_WIDTH
+
+
+def canvas_width_for(photo_width: int, photo_height: int) -> float:
+    """The info strip's design canvas width for a photo of these proportions.
+
+    Landscape lands on CANVAS_MAX and is therefore untouched; the taller the
+    photo, the narrower the canvas and the larger the type ends up once it is
+    scaled to the card.
+    """
+    aspect = photo_height / photo_width
+    return min(CANVAS_MAX, max(CANVAS_MIN, PORTRAIT_REFERENCE / aspect))
 
 
 def card_width_for_photo(photo_width: int, frame: str) -> float:

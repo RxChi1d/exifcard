@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import html
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from PIL import Image
@@ -42,6 +42,11 @@ class StripSpec:
     logo: Path | None = None
     signature: Path | None = None
     signature_width: float = layout.SIGNATURE_WIDTH
+    # Width of the design canvas the strip is laid out on before being scaled
+    # to the card. See layout.canvas_width_for.
+    canvas_width: float = layout.CANVAS_MAX
+    # Whether the first-stage tightening is applied.
+    tight: bool = False
 
 
 def _font_faces() -> str:
@@ -57,13 +62,15 @@ def _stack(*families: str) -> str:
 
 
 def build_html(spec: StripSpec) -> str:
-    """The strip as a standalone document, laid out at the 760px baseline.
+    """The strip as a standalone document, laid out on its design canvas.
 
     Scaling to the output size is done by the browser's device pixel ratio, so
     every length in here stays at its design value and nothing has to be
     pre-multiplied.
     """
     d = spec.data
+    group_gap = layout.ROW_GROUP_GAP_TIGHT if spec.tight else layout.ROW_GROUP_GAP
+    exposure_track = layout.TRACK_EXPOSURE_TIGHT if spec.tight else layout.TRACK_EXPOSURE
     mode = layout.FRAMES[spec.frame]
     paper = layout.PAPER[spec.paper]
     gear_font = _stack(layout.FONT_GEAR, layout.FONT_FALLBACK)
@@ -105,7 +112,7 @@ def build_html(spec: StripSpec) -> str:
 
     exposure = (
         f'<div style="font-family:{mono_font};font-size:{layout.SIZE_EXPOSURE}px;'
-        f"letter-spacing:{layout.TRACK_EXPOSURE}em;color:{layout.COLOR_EXPOSURE};"
+        f"letter-spacing:{exposure_track}em;color:{layout.COLOR_EXPOSURE};"
         f"line-height:{layout.LINE_HEIGHT};"
         f'white-space:nowrap">{html.escape(d.exposure)}</div>'
         if d.exposure
@@ -150,15 +157,15 @@ def build_html(spec: StripSpec) -> str:
 {_font_faces()}
 *{{margin:0;padding:0;box-sizing:border-box}}
 html,body{{background:{paper}}}
-#strip{{width:{layout.BASELINE_WIDTH}px;background:{paper};
+#strip{{width:{spec.canvas_width}px;background:{paper};
   padding:0 {mode.card_pad_side}px;font-family:{gear_font}}}
 #info{{padding:{mode.info_pad_top}px {mode.info_pad_side}px {mode.info_pad_bottom}px;
   display:flex;flex-direction:column;gap:{layout.ROW_GAP}px}}
 #row1{{display:flex;align-items:center;justify-content:space-between;
-  gap:{layout.ROW_GROUP_GAP}px;height:{layout.ROW1_HEIGHT}px}}
+  gap:{group_gap}px;height:{layout.ROW1_HEIGHT}px}}
 #row1left{{display:flex;align-items:center;gap:{layout.ROW1_LEFT_GAP}px;flex:none}}
 #row2{{display:flex;align-items:flex-end;justify-content:space-between;
-  gap:{layout.ROW_GROUP_GAP}px;height:{layout.ROW2_HEIGHT}px}}
+  gap:{group_gap}px;height:{layout.ROW2_HEIGHT}px}}
 #row2left{{display:flex;flex-direction:column;justify-content:flex-end;
   gap:{layout.ROW2_LINE_GAP}px;min-width:0}}
 </style></head><body>
@@ -169,16 +176,96 @@ html,body{{background:{paper}}}
 </body></html>"""
 
 
+def fit(spec: StripSpec, browser=None) -> StripSpec:
+    """Widen the canvas only as far as this photo's own text demands.
+
+    A long body name next to a long lens name overruns the row. The design's
+    answer is never to wrap, truncate or abbreviate, but to give ground in two
+    steps: tighten first, which costs no type size at all, and only widen the
+    canvas -- shrinking the whole block -- if tightening was not enough.
+
+    Both measurements are taken in one pass from a canvas that starts at its
+    ratio-derived width, so the result depends only on this photo's content,
+    never on what was rendered before it.
+    """
+    from playwright.sync_api import sync_playwright
+
+    loose = replace(spec, tight=False)
+    html_source = build_html(loose)
+
+    def probe(page_browser) -> tuple[float, float, float]:
+        page = page_browser.new_page(
+            viewport={"width": max(1, round(spec.canvas_width)), "height": 400}
+        )
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                doc = Path(tmp) / "strip.html"
+                doc.write_text(html_source, encoding="utf-8")
+                page.goto(doc.as_uri())
+                page.wait_for_function("document.fonts.ready.then(() => true)")
+                return page.evaluate(
+                    _MEASURE_JS,
+                    {
+                        "gap": layout.ROW_GROUP_GAP_TIGHT,
+                        "track": f"{layout.TRACK_EXPOSURE_TIGHT}em",
+                    },
+                )
+        finally:
+            page.close()
+
+    if browser is not None:
+        available, needed_loose, needed_tight = probe(browser)
+    else:
+        with sync_playwright() as pw:
+            owned = pw.chromium.launch()
+            try:
+                available, needed_loose, needed_tight = probe(owned)
+            finally:
+                owned.close()
+
+    if needed_loose <= available:
+        return loose
+    if needed_tight <= available:
+        return replace(spec, tight=True)
+
+    # Still overruns: grow the canvas by exactly the shortfall, which scales
+    # the whole block down rather than singling out any one element.
+    return replace(
+        spec, tight=True, canvas_width=spec.canvas_width + (needed_tight - available)
+    )
+
+
+_MEASURE_JS = """(tight) => {
+  const info = document.getElementById('info');
+  const rows = ['row1', 'row2'].map((id) => document.getElementById(id));
+  const widthOf = (row) =>
+    Array.from(row.children).reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) +
+    parseFloat(getComputedStyle(row).columnGap || 0) * Math.max(0, row.children.length - 1);
+  const available = rows[0].clientWidth;
+  const loose = Math.max(...rows.map(widthOf));
+  const exposure = rows[0].lastElementChild;
+  const previousTrack = exposure ? exposure.style.letterSpacing : null;
+  for (const row of rows) row.style.gap = tight.gap + 'px';
+  if (exposure && exposure !== rows[0].firstElementChild) {
+    exposure.style.letterSpacing = tight.track;
+  }
+  const tightened = Math.max(...rows.map(widthOf));
+  for (const row of rows) row.style.gap = '';
+  if (previousTrack !== null) exposure.style.letterSpacing = previousTrack;
+  return [available, loose, tightened];
+}"""
+
+
 def render(spec: StripSpec, browser=None) -> Image.Image:
     """Rasterize the strip at the card's real pixel width."""
     from playwright.sync_api import sync_playwright
 
-    scale = layout.scale_for(spec.card_width)
+    scale = spec.card_width / spec.canvas_width
     html_source = build_html(spec)
 
     def shoot(page_browser) -> bytes:
         page = page_browser.new_page(
-            viewport={"width": int(layout.BASELINE_WIDTH), "height": 400},
+            viewport={"width": max(1, round(spec.canvas_width)), "height": 400},
             device_scale_factor=scale,
         )
         try:
@@ -234,7 +321,9 @@ def measure(spec: StripSpec, browser=None) -> dict[str, dict[str, float]]:
     }"""
 
     def probe(page_browser):
-        page = page_browser.new_page(viewport={"width": int(layout.BASELINE_WIDTH), "height": 400})
+        page = page_browser.new_page(
+            viewport={"width": max(1, round(spec.canvas_width)), "height": 400}
+        )
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 doc = Path(tmp) / "strip.html"
