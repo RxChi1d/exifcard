@@ -115,6 +115,7 @@ def test_fitting_depends_only_on_the_photo_at_hand(sample, browser):
     assert after.canvas_width == layout.CANVAS_MIN
 
 
+@pytest.mark.golden
 def test_landscape_output_is_unchanged_from_before_the_canvas_existed(sample, browser):
     """The compensation must not touch landscape at all."""
     spec = strip.StripSpec(

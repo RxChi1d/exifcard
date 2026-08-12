@@ -13,12 +13,13 @@ Scope boundary: a command-line tool, run locally, over local files. **Not** an A
 ```sh
 uv sync                                  # install, including dev group
 uv run playwright install chromium       # once, before anything renders
-uv run pytest                            # full suite, ~4s
+uv run pytest                            # full suite, ~8s
+uv run pytest -m "not golden"            # what CI runs
 uv run pytest tests/test_names.py -k brand   # one file / one test
 uv run exifcard render <path> --dry-run  # see what a run would write
 ```
 
-Tests that need a browser call `pytest.importorskip("playwright.sync_api")`, so the pure-logic tests still run without it.
+Tests that need a browser call `pytest.importorskip("playwright.sync_api")`, so the pure-logic tests still run without it. Tests marked `golden` compare rendered pixels against reference images and are local-only: text rasterizes differently on Linux, so CI runs `-m "not golden"` and everything that guards behaviour lives outside that marker.
 
 ## Architecture
 
@@ -37,7 +38,7 @@ compose.py   photo pasted at native size + strip below   (numpy/Pillow)
 encode.py    per-format encoders, including the jpegtran lossless path
 ```
 
-`render.py` sequences those for one photo; `cli.py` handles batching, prompts and progress. `layout.py` holds every design constant at the 760px baseline.
+`render.py` sequences those for one photo; `cli.py` handles batching, prompts and progress. A photo that fails is recorded and the batch continues, because one unreadable file should not cost the other 199; the run still exits non-zero. `layout.py` holds every design constant at the 760px baseline.
 
 Two consequences worth keeping in mind before changing anything here:
 

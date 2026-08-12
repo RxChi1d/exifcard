@@ -52,6 +52,7 @@ def sample():
     )
 
 
+@pytest.mark.golden
 @pytest.mark.parametrize(
     "name,overrides",
     [

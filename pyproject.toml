@@ -34,6 +34,9 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "golden: compares rendered pixels against a reference image. Run locally; excluded in CI because text rasterization differs between platforms.",
+]
 
 [tool.ruff]
 line-length = 100

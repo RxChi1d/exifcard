@@ -6,7 +6,7 @@ It is built for personal album archiving and the occasional share, not for socia
 
 ## Demo
 
-The same layout across four aspect ratios and both border modes. The photos are stand-ins and the signature is a sample, not a real one.
+The same layout across five aspect ratios and both border modes. The photos are stand-ins and the signature is a sample, not a real one.
 
 | `bleed` — for screens | `equal` — for print, with a faint inset hairline |
 |---|---|
@@ -35,9 +35,20 @@ exifcard render ./kyoto/ --location "Kyoto"     # a whole folder, one caption
 exifcard render ./kyoto/ --dry-run              # show what would be written
 ```
 
-Cards land in `outputs/<folder name>/`. The source folder is never written to, so pointing the tool at a backup or a photo library leaves it untouched.
+The source folder is never written to, so pointing the tool at a backup or a photo library leaves it untouched.
+
+Cards land in `outputs/<source folder name>/`, so passing two albums in one run keeps them apart rather than funnelling one into the other's folder.
 
 Existing cards prompt before being replaced (`y`/`N`/`a`ll/`s`kip/`q`uit), or pass `--force` or `--skip-existing` to answer in advance. In a non-interactive shell an existing file is an error rather than a silent overwrite.
+
+A file that cannot be read does not stop the run. The batch finishes, names what failed, and exits non-zero:
+
+```
+198 written, 0 skipped, 2 failed -> outputs/kyoto
+failed:
+  DSC00123.JPG  --lossless is not possible here: the photo is 3000x2002, not a multiple of 16
+  DSC00456.JPG  cannot identify image file
+```
 
 ### Per-photo captions
 

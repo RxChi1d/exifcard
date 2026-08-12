@@ -181,9 +181,15 @@ def render_cards(
         err.print("[yellow]No photos found.[/]")
         raise typer.Exit(1)
 
+    # Each photo's output folder comes from its own source folder, so passing
+    # two albums in one run does not funnel one of them into a directory named
+    # after the other -- and their same-numbered files do not collide.
     out_root = out or Path(cfg.out)
-    out_dir = out_root / _album_name(paths[0])
-    captions = locations.load(locations_file or out_dir / locations.FILENAME)
+    out_dirs = {photo: out_root / _album_name(photo) for photo in photos}
+    caption_files = {
+        directory: locations.load(locations_file or directory / locations.FILENAME)
+        for directory in set(out_dirs.values())
+    }
 
     options = render.Options(
         frame=frame,
@@ -199,16 +205,18 @@ def render_cards(
     )
 
     if dry_run:
-        console.print(f"[bold]{len(photos)}[/] photo(s) -> {out_dir}")
+        console.print(f"[bold]{len(photos)}[/] photo(s)")
         for photo in photos:
+            out_dir = out_dirs[photo]
             target = render.plan_destination(photo, out_dir, render.resolve_format(photo, fmt))
             status = "[yellow]exists[/]" if target.exists() else "new"
-            caption = captions.get(photo.name) or location or ""
-            console.print(f"  {photo.name:24} -> {target.name:24} {status}  {caption}")
+            caption = caption_files[out_dir].get(photo.name) or location or ""
+            console.print(f"  {photo.name:24} -> {target}  {status}  {caption}")
         return
 
     overwrite_state: dict = {"all": True if force else (False if skip_existing else None)}
     written = skipped = 0
+    failures: list[tuple[Path, str]] = []
 
     from playwright.sync_api import sync_playwright
 
@@ -225,6 +233,7 @@ def render_cards(
             ) as progress:
                 task = progress.add_task("Rendering", total=len(photos))
                 for photo in photos:
+                    out_dir = out_dirs[photo]
                     target = render.plan_destination(
                         photo, out_dir, render.resolve_format(photo, fmt)
                     )
@@ -233,12 +242,16 @@ def render_cards(
                         progress.advance(task)
                         continue
 
-                    options.location = captions.get(photo.name) or location or ""
+                    options.location = caption_files[out_dir].get(photo.name) or location or ""
                     try:
                         outcome = render.render(photo, target, options, browser=browser)
                     except (RuntimeError, OSError, ValueError) as failure:
-                        err.print(f"[red]{photo.name}: {failure}[/]")
-                        raise typer.Exit(1) from None
+                        # One unreadable file should not cost you the other 199.
+                        # The run finishes, names what failed, and exits non-zero
+                        # so a script still notices.
+                        failures.append((photo, str(failure)))
+                        progress.advance(task)
+                        continue
                     written += 1
                     if verbose:
                         console.print(
@@ -252,7 +265,17 @@ def render_cards(
         finally:
             browser.close()
 
-    console.print(f"[green]{written}[/] written, {skipped} skipped -> {out_dir}")
+    destinations = ", ".join(str(d) for d in sorted(set(out_dirs.values())))
+    summary = f"[green]{written}[/] written, {skipped} skipped"
+    if failures:
+        summary += f", [red]{len(failures)} failed[/]"
+    console.print(f"{summary} -> {destinations}")
+
+    if failures:
+        err.print("[red]failed:[/]")
+        for photo, reason in failures:
+            err.print(f"  {photo.name}  {reason}")
+        raise typer.Exit(1)
 
 
 @app.command("locations")

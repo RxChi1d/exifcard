@@ -1,0 +1,39 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      # The browser is a separate download, not a wheel, so it gets its own
+      # cache keyed on the pinned Playwright version.
+      - id: playwright-version
+        run: echo "version=$(uv run python -c 'import playwright; print(playwright.__version__)')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: uv run playwright install --with-deps chromium
+
+      - run: sudo apt-get install -y libjpeg-turbo-progs
+
+      # Golden tests compare pixels, and text rasterizes differently on Linux
+      # than on the machine the references were made on. They stay a local
+      # check; everything that guards behaviour runs here.
+      - run: uv run pytest -m "not golden" -q
