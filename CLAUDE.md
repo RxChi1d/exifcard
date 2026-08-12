@@ -2,37 +2,35 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+It records what the code cannot tell you: decisions, their constraints, and the traps whose cost is paid before you would think to look. How to install and use the tool is in `README.md`; why each decision was reached, with the measurements, is in `docs/design.md`.
+
 ## Project
 
-`exifcard` is a **local CLI tool** that turns a photo plus its EXIF data into a finished card image: the photo on top, a metadata strip below, written out as one flat image file for personal album archiving (Immich) and occasional sharing.
+`exifcard` turns a photo and its EXIF data into a finished card image: the photo on top, a metadata strip below — camera, lens, exposure, date, an optional location and signature — written out as one flat image file for personal album archiving and occasional sharing.
 
-Scope boundary: a command-line tool, run locally, over local files. **Not** an API server, not a web service, not a GUI. Do not add HTTP endpoints, a daemon, or a browser UI. Chromium is present strictly as an internal text renderer.
+## Scope
+
+A command-line tool, run locally, over local files. **Not** an API server, not a web service, not a GUI. Do not add HTTP endpoints, a daemon, or a browser UI. Chromium is present strictly as an internal text renderer.
 
 ## Commands
 
 ```sh
-uv sync                                  # install, including dev group
-uv run playwright install chromium       # once, before anything renders
-uv build --wheel                         # verify the package still builds
-uv run pytest                            # full suite, ~8s
-uv run pytest -m "not golden"            # what CI runs
-uv run pytest tests/test_names.py -k brand   # one file / one test
-uv run exifcard render <path> --dry-run  # see what a run would write
+uv run exifcard install-browser   # once; nothing renders without it
+uv run pytest                     # full suite
+uv run pytest -m "not golden"     # what CI runs
 ```
 
-Tests that need a browser call `pytest.importorskip("playwright.sync_api")`, so the pure-logic tests still run without it. Tests marked `golden` compare rendered pixels against reference images and are local-only: text rasterizes differently on Linux, so CI runs `-m "not golden"` and everything that guards behaviour lives outside that marker.
+`golden` tests compare rendered pixels and are local-only: text rasterizes differently on Linux. Anything that guards behaviour must therefore live outside that marker.
 
 ## Architecture
 
-`docs/design.md` holds the reasoning and the measurements behind the decisions summarised here. Read it before overturning any of them — most were settled against evidence rather than preference.
-
-The photo and the info strip never overlap, which is the hinge the whole design turns on: they are produced by different engines and joined at the end.
+The photo and the info strip never overlap. That is the hinge the whole implementation turns on: they are produced by different engines and joined at the end.
 
 ```
 metadata.py  EXIF -> display strings        names.py   gear display-name tables
-     |                                      logos.py   Make/Model -> bundled wordmark
+     |                                      logos.py   Make/Model -> bundled mark
      v
-strip.py     Chromium renders ONLY the strip, at the card's real pixel width
+strip.py     Chromium renders ONLY the strip, on its own design canvas
      |
      v
 compose.py   photo pasted at native size + strip below   (numpy/Pillow)
@@ -41,58 +39,38 @@ compose.py   photo pasted at native size + strip below   (numpy/Pillow)
 encode.py    per-format encoders, including the jpegtran lossless path
 ```
 
-`render.py` sequences those for one photo; `cli.py` handles batching, prompts and progress. A photo that fails is recorded and the batch continues, because one unreadable file should not cost the other 199; the run still exits non-zero. `layout.py` holds every design constant at the 760px baseline.
+`render.py` sequences those for one photo; `cli.py` handles batching, prompts and progress. `layout.py` holds every design constant at the 760px baseline.
 
-Two consequences worth keeping in mind before changing anything here:
-
-- **The photo never enters the browser.** That is what keeps its pixels, ICC profile and bit depth intact, and what keeps a 40MP card from hitting Chromium's surface limits. Rendering the whole card in the browser would be simpler and would silently degrade every photo.
-- **The browser is not replaceable by Pillow**, which is the question this design invites. Pillow has no letter-spacing API — `ImageDraw.text`'s `spacing` is line spacing — and the design tracks every text element. Its default layout engine also ignores the font's GPOS table (Raqm is absent from the standard wheels), so text sets without the kerning the typeface specifies: measured on Archivo at 100px, Chromium renders "AV" at 127.33px against 130.16px drawn per character, while Pillow gives 138.00px either way.
-- **Scaling happens through `device_scale_factor`, not by pre-multiplying lengths.** Every value in `layout.py` and in the generated HTML stays at its baseline number.
+- **The photo never enters the browser**, which is what keeps its pixels, ICC profile and bit depth intact and a 40MP card within Chromium's surface limits.
+- **The browser is not replaceable by Pillow.** Pillow has no letter-spacing API and its default layout ignores the font's kerning; the design depends on both. Measurements in `docs/design.md`.
+- **Scaling happens through `device_scale_factor`**, never by pre-multiplying lengths. Every value in `layout.py` and in the generated HTML stays at its baseline number.
 
 ## Design rules
 
-These are settled decisions, not defaults. Changing one is a design change.
+Settled decisions from a specification that is not in this repository, so they cannot be recovered by reading the code. Changing one is a design change.
 
-- The photo is the subject: largest type in the strip is 13.5px at the 760px baseline. Nothing is promoted to a heading.
-- Gear before exposure. Row 1: logo + body model left, exposure readout right. Row 2: lens details and date/location left, signature right.
-- No dividers except the single 1px rule between logo and body model. Grouping comes from columns and line spacing alone.
-- Only the camera body gets a graphic logo; lenses are always text. Lens brand appears only when it differs from the body's.
-- **The strip height is fixed in design units** — independent of how much metadata a photo carries. `layout.ROW1_HEIGHT`, `ROW2_HEIGHT` and `LINE_HEIGHT` exist for this reason: leaving line boxes to font metrics made the strip a fraction of a pixel taller when a lens name was present, and an album stopped stacking evenly.
-- **Type size is compensated for portrait, layout is not.** The strip is laid out on a canvas of width `D = clamp(604 / aspect, 450, 760)` and scaled by `card width / D`, so a narrow card gets proportionally larger type instead of shrinking with its own width. Landscape lands on 760 and must stay pixel-identical — `tests/test_canvas.py` asserts that against the golden image. There is no separate portrait layout: crowding comes from the card being narrow, not from its orientation.
-- **Long names never wrap, truncate or abbreviate.** `strip.fit` measures the real text in the browser and gives ground in two steps: tighten (exposure tracking, column gap), then widen the canvas. It must stay bidirectional — a one-way ratchet would leave a card shrunken because the previous photo in the batch had a long lens name.
-- No border-radius, no shadows, no gradients, no accent colors.
-- **Missing values are omitted, never replaced.** No `Unknown`, no dash, no `N/A`. The layout does not collapse to fill the gap.
-- Any aspect ratio is accepted and the photo is never cropped. The four ratios in the demo images are validated examples, not a supported list.
+- The photo is the subject. Nothing in the strip is promoted to a heading, and grouping comes from columns and line spacing — no dividers beyond the single rule beside the logo, no border-radius, shadows, gradients or accent colours.
+- Gear before exposure: the body and lens belong together and precede the readings.
+- Only the camera body gets a graphic mark; lenses are always text, and the lens brand appears only when it differs from the body's.
+- **Strip height is fixed in design units**, independent of how much metadata a photo carries — an album has to stack evenly. This is why `ROW1_HEIGHT`, `ROW2_HEIGHT` and `LINE_HEIGHT` are stated outright instead of left to font metrics.
+- **Type size is compensated for portrait; layout is not.** Crowding comes from a card being narrow, not from its orientation, so there is no separate portrait layout. Landscape must stay pixel-identical — `tests/test_canvas.py` asserts it.
+- **Long names never wrap, truncate or abbreviate.** `strip.fit` tightens first, then widens the canvas. It must stay bidirectional: a one-way ratchet would leave a card shrunken because the previous photo in the batch had a long lens name.
+- **Missing values are omitted, never replaced.** No `Unknown`, no dash, no `N/A`, and the layout does not collapse to fill the gap.
+- Gear tables map an internal code onto the product's real name. They are an override list, never an allow list, and **never a place to shorten anything** — length is `strip.fit`'s problem.
+- Any aspect ratio is accepted and the photo is never cropped.
 
-## Data handling
+## Traps
 
-- **EXIF strings are NUL-padded by cameras.** `metadata.clean()` strips them; `.strip()` alone does not, and every table lookup silently misses. Fujifilm pads `LensModel` with 29 NUL bytes.
-- Gear tables are an override list, never an allow list: unregistered gear is displayed exactly as EXIF wrote it. They map an internal code onto the product's real name and are **not** a place to shorten anything — length is `strip.fit`'s problem.
-- `Make` is normalized by stripping legal-entity noise (`NIKON CORPORATION` → `NIKON`). Ricoh ships both RICOH- and PENTAX-branded bodies under one `Make`, so `logos.toml` also matches on a `Model` prefix.
-- Pillow reports Sony JPEGs as `MPO` because of the multi-picture block. Anything checking for JPEG must accept both.
-- Output EXIF is copied wholesale by default, **except `Orientation`, which is forced to 1** — rotation is baked into the pixels, and leaving the flag would make viewers rotate the finished card.
+Each of these is silent, or costs more than the fix. The code says so where it happens; this is the list of places to be careful before you get there.
 
-## Output policy
-
-- Format follows the input unless `--format` overrides it.
-- JPEG defaults to `quality=95` and carries over the **source's chroma subsampling** only. Do not reuse the source's quantization tables here: on a 33MP file that yields 19.6MB from an 18.8MB original -- a "card" larger than the photo, which is the opposite of what a card is for. Those tables belong solely to the `--lossless` path, where jpegtran needs the canvas quantized to match the coefficients it drops in. `tests/test_render.py` pins this, because every other check only asks whether the picture looks right, and the uncompressed version looked better.
-- HEIC needs `GRID_TILE_SIZE` set or libheif produces an undecodable file above roughly 28MP. Tiling costs about 1% in size.
-- `--lossless` uses `jpegtran -drop` and requires photo dimensions that are multiples of 16. It raises rather than falling back: a promise that silently degrades is worse than an error. The external binary is unavoidable, not a shortcut: bit-exactness means never decoding, Pillow exposes quantization tables but not coefficients, and the pure-Python options are dead ends (`jpeglib` ships cp38 wheels only, `jpegtran-cffi` ships none). Re-check before replacing it.
-- Default output width is the photo's native resolution. Compression is invisible, resolution loss is not.
-
-## Assets
-
-Everything the program reads at runtime lives in `src/exifcard/assets/` so it ships in the wheel. Anything only humans look at lives in `docs/`.
-
-Assets are collected because they sit inside the package directory; do **not** add a `force-include` for them, which makes hatchling see every file twice and refuse to build. `tests/test_packaging.py` builds a wheel and checks the assets are in it, because nothing else notices a broken package until someone tries to install it.
-
-- `assets/fonts/` — Archivo, JetBrains Mono, Noto Sans, with their OFL texts. **Archivo has no Greek alpha**, and Sony bodies display as `α7C II`; Noto Sans is bundled as the fallback that covers it.
-- `assets/logos/` — public-domain brand marks with provenance in `logos.toml`, covering camera and phone makers alike: a phone is the camera that took the photo. Mostly wordmarks; Nikon, Leica, OM System, Apple, Xiaomi and OnePlus have none in the public domain and use the maker's square emblem, which aligned by height comes out roughly a sixth as wide. A mark is only bundled if it survives 11px on warm paper — Nothing's white-on-black lettering does not, so it uses the text fallback.
-
-`test-photos/` holds real camera files and is gitignored — they carry GPS and are not ours to publish.
+- **Do not encode output with the source's quantization tables.** They belong solely to `--lossless`, where jpegtran needs the canvas quantized to match. Used as a default they make a card larger than the photo it came from, and every visual check still passes.
+- **Do not add a `force-include` for the assets.** They already sit inside the package; declaring them twice makes the wheel fail to build, which nothing but an install attempt reveals.
+- **`--lossless` must raise, never fall back.** A promise that silently degrades is worse than an error.
+- **Bundled marks must survive 11px on warm paper**, which is the size they are actually used at. `logos.toml` records why each one is present or absent.
+- `test-photos/` holds real camera files and is gitignored: they carry GPS and are not ours to publish.
 
 ## Conventions
 
 Write code comments and config-file comments in English.
 
-Git is on branch `feat/initial-implementation`; `main` holds only the initial docs commit.
+Work happens on branches: `main` requires a pull request and a passing `test` check.
