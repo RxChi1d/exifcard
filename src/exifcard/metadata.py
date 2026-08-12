@@ -70,10 +70,21 @@ def normalize_make(make: str | None) -> str:
     return " ".join(text.split()).upper()
 
 
-def format_focal_length(value) -> str:
-    if value is None:
+def format_focal_length(value, equivalent=None) -> str:
+    """Focal length as an angle of view, not as a lens barrel measurement.
+
+    The 35mm-equivalent value is preferred because the physical one cannot
+    record what was actually framed: an iPhone shoots 6.765mm at both 30mm and
+    48mm equivalent depending on the sensor crop, so two different framings
+    would otherwise print the same number. Bodies that omit the tag -- mostly
+    older DSLRs -- keep the physical value, which is what the card has always
+    shown, so nothing reads worse than before. Some bodies write 0 rather than
+    omitting the tag, which is the same statement and must not print as 0mm.
+    """
+    chosen = equivalent if equivalent else value
+    if chosen is None:
         return ""
-    return f"{round(float(value))}mm"
+    return f"{round(float(chosen))}mm"
 
 
 def format_aperture(value) -> str:
@@ -162,7 +173,10 @@ def read(path: Path, image: Image.Image | None = None, gear: GearTables | None =
     data.exposure = SEPARATOR.join(
         part
         for part in (
-            format_focal_length(ifd.get(_TAG["FocalLength"])),
+            format_focal_length(
+                ifd.get(_TAG["FocalLength"]),
+                ifd.get(_TAG["FocalLengthIn35mmFilm"]),
+            ),
             format_aperture(ifd.get(_TAG["FNumber"])),
             format_shutter(ifd.get(_TAG["ExposureTime"])),
             format_iso(ifd.get(_TAG["ISOSpeedRatings"])),

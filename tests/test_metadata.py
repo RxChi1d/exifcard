@@ -17,6 +17,27 @@ def test_focal_length_is_a_whole_number(value, expected):
 
 
 @pytest.mark.parametrize(
+    "physical,equivalent,expected",
+    [
+        # A phone shoots the same glass at two sensor crops; only the
+        # equivalent value tells the two framings apart.
+        (6.765, 30, "30mm"),
+        (6.765, 48, "48mm"),
+        (17.0, 26, "26mm"),
+        # Full frame reports both and they agree.
+        (200.0, 200, "200mm"),
+        # Older DSLRs omit the tag, so the physical value stands.
+        (33.0, None, "33mm"),
+        # Some bodies write 0 instead of omitting it, which means the same.
+        (33.0, 0, "33mm"),
+        (None, None, ""),
+    ],
+)
+def test_focal_length_prefers_the_35mm_equivalent(physical, equivalent, expected):
+    assert metadata.format_focal_length(physical, equivalent) == expected
+
+
+@pytest.mark.parametrize(
     "value,expected",
     [(1.4, "f/1.4"), (5.6, "f/5.6"), (8, "f/8"), (8.0, "f/8"), (None, "")],
 )
@@ -110,3 +131,27 @@ def test_phone_makers_resolve_to_a_logo():
         ("ASUSTeK COMPUTER INC.", "ASUS_AI2401"),
     ):
         assert logos.find(metadata.normalize_make(raw_make), model) is not None
+
+
+def _photo_with(tmp_path, name, ifd_values):
+    from PIL import Image
+
+    path = tmp_path / name
+    exif = Image.Exif()
+    exif[0x010F] = "Apple"
+    exif[0x0110] = "iPhone 16 Pro"
+    exif.get_ifd(0x8769).update(ifd_values)
+    Image.new("RGB", (60, 40)).save(path, exif=exif)
+    return path
+
+
+def test_read_takes_the_focal_length_from_the_equivalent_tag(tmp_path):
+    # Wired to the wrong tag this still produces a plausible number, so the
+    # check has to go through read() rather than the formatter alone.
+    photo = _photo_with(tmp_path, "IMG_0001.JPG", {0x920A: 6.765, 0xA405: 30})
+    assert "30mm" in metadata.read(photo).exposure
+
+
+def test_read_falls_back_to_the_physical_focal_length(tmp_path):
+    photo = _photo_with(tmp_path, "IMG_0002.JPG", {0x920A: 33.0})
+    assert "33mm" in metadata.read(photo).exposure

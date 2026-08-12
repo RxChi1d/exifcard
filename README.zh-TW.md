@@ -118,6 +118,8 @@ signature = "~/Pictures/private/signature.png"
 
 相機品牌標誌、機身型號、鏡頭品牌（僅在與機身品牌不同時顯示）、鏡頭型號、焦段、光圈、快門、ISO、日期、可選的地點，以及可選的手寫簽名。
 
+相機有記錄 35mm 等效焦距時，焦段顯示等效值——因為在手機上，實體焦距分辨不出兩種不同的取景。（[原因](docs/design.zh-TW.md#焦距)。）
+
 EXIF 沒有提供的一律省略——手動鏡不回報光圈，曝光讀數就少一項。任何欄位都不會被替換成 `Unknown` 或破折號，而資訊列的高度兩種情況下都一樣。
 
 內建的品牌標誌涵蓋相機——Canon、Fujifilm、Hasselblad、Leica、LUMIX、Nikon、Olympus、OM System、Pentax、Ricoh、Sigma、Sony——以及手機，因為手機就是拍下這張照片的相機：Apple、ASUS、Google、HONOR、Huawei、Motorola、OnePlus、OPPO、Samsung、vivo、Xiaomi。公有領域裡有字標的就用字標，沒有的就用該廠牌的方形徽標。
