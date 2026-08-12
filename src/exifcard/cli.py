@@ -46,10 +46,22 @@ def _collect_photos(path: Path, recursive: bool) -> list[Path]:
     )
 
 
-def _album_name(path: Path) -> str:
+def _album_root(path: Path) -> Path:
     resolved = path.resolve()
-    directory = resolved if resolved.is_dir() else resolved.parent
-    return directory.name or "cards"
+    return resolved if resolved.is_dir() else resolved.parent
+
+
+def _output_dir(photo: Path, root: Path, out_root: Path) -> Path:
+    """Where one photo's card belongs.
+
+    Cards mirror the source layout under a folder named after the album, so
+    two albums passed in one run stay apart, and --recursive keeps a nested
+    folder nested instead of flattening subfolders from different albums into
+    a single directory where their files would collide.
+    """
+    album = out_root / (root.name or "cards")
+    relative = photo.resolve().parent.relative_to(root)
+    return album / relative if relative != Path(".") else album
 
 
 def _resolve_overwrite(destination: Path, state: dict) -> bool:
@@ -173,10 +185,14 @@ def render_cards(
             raise typer.BadParameter(f"signature not found: {signature_path}")
 
     photos: list[Path] = []
+    roots: dict[Path, Path] = {}
     for path in paths:
         if not path.exists():
             raise typer.BadParameter(f"no such path: {path}")
-        photos.extend(_collect_photos(path, recursive))
+        root = _album_root(path)
+        for photo in _collect_photos(path, recursive):
+            photos.append(photo)
+            roots[photo] = root
     if not photos:
         err.print("[yellow]No photos found.[/]")
         raise typer.Exit(1)
@@ -185,7 +201,7 @@ def render_cards(
     # two albums in one run does not funnel one of them into a directory named
     # after the other -- and their same-numbered files do not collide.
     out_root = out or Path(cfg.out)
-    out_dirs = {photo: out_root / _album_name(photo) for photo in photos}
+    out_dirs = {photo: _output_dir(photo, roots[photo], out_root) for photo in photos}
     caption_files = {
         directory: locations.load(locations_file or directory / locations.FILENAME)
         for directory in set(out_dirs.values())
@@ -298,7 +314,7 @@ def locations_cmd(
         err.print("[yellow]No photos found.[/]")
         raise typer.Exit(1)
 
-    target = locations_file or (out or Path(cfg.out)) / _album_name(path) / locations.FILENAME
+    target = locations_file or _output_dir(photos[0], _album_root(path), out or Path(cfg.out)) / locations.FILENAME
     target.parent.mkdir(parents=True, exist_ok=True)
 
     entries: list[tuple[str, str]] = []

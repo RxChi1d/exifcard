@@ -37,7 +37,7 @@ exifcard render ./kyoto/ --dry-run              # show what would be written
 
 The source folder is never written to, so pointing the tool at a backup or a photo library leaves it untouched.
 
-Cards land in `outputs/<source folder name>/`, so passing two albums in one run keeps them apart rather than funnelling one into the other's folder.
+Cards land in `outputs/<source folder name>/`, mirroring the source layout. Two albums passed in one run stay apart, and `--recursive` keeps a nested folder nested rather than flattening subfolders from different albums into one directory.
 
 Existing cards prompt before being replaced (`y`/`N`/`a`ll/`s`kip/`q`uit), or pass `--force` or `--skip-existing` to answer in advance. In a non-interactive shell an existing file is an error rather than a silent overwrite.
 

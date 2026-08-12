@@ -78,3 +78,39 @@ def test_dry_run_writes_nothing(tmp_path):
     assert result.exit_code == 0, result.output
     assert "good.JPG" in result.output
     assert not out.exists()
+
+
+def test_recursive_keeps_nested_folders_nested(tmp_path):
+    """Flattening would merge subfolders from different albums.
+
+    Two albums each with their own `raw/` would land in one directory, where
+    same-numbered files then collide.
+    """
+    photo(tmp_path / "kyoto" / "top.JPG")
+    photo(tmp_path / "kyoto" / "sub" / "nested.JPG")
+    out = tmp_path / "out"
+
+    result = runner.invoke(
+        app, ["render", str(tmp_path / "kyoto"), "--recursive", "--out", str(out), "--force"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (out / "kyoto" / "top.jpg").exists()
+    assert (out / "kyoto" / "sub" / "nested.jpg").exists()
+
+
+def test_captions_are_read_from_the_album_folder(tmp_path):
+    album = tmp_path / "kyoto"
+    photo(album / "DSC00001.JPG")
+    out = tmp_path / "out"
+    (out / "kyoto").mkdir(parents=True)
+    (out / "kyoto" / "locations.toml").write_text(
+        '"DSC00001.JPG" = "Fushimi Inari, Kyoto"\n', encoding="utf-8"
+    )
+
+    result = runner.invoke(
+        app, ["render", str(album), "--out", str(out), "--force", "--dry-run"]
+    )
+
+    # The console wraps long lines, so compare on collapsed whitespace.
+    assert "Fushimi Inari, Kyoto" in " ".join(result.output.split())
