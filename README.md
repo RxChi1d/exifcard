@@ -1,3 +1,5 @@
+**English** | [繁體中文](README.zh-TW.md)
+
 # exifcard
 
 A local CLI tool that turns a photo and its EXIF data into a finished card image: the photo on top, a quiet metadata strip below, written out as a single flat image file.
