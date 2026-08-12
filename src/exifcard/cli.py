@@ -344,7 +344,17 @@ def locations_cmd(
 
 
 @app.command("install-browser")
-def install_browser() -> None:
+def install_browser(
+    with_deps: Annotated[
+        bool,
+        typer.Option(
+            "--with-deps",
+            help="Also install Chromium's system libraries. Needed on most Linux "
+            "distributions, where the browser otherwise downloads but will not start. "
+            "Uses sudo.",
+        ),
+    ] = False,
+) -> None:
     """Download the Chromium build used to render the info strip.
 
     Playwright keeps its browsers outside the Python package, so this has to
@@ -354,7 +364,12 @@ def install_browser() -> None:
     """
     import subprocess
 
-    result = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])
+    command = [sys.executable, "-m", "playwright", "install"]
+    if with_deps:
+        command.append("--with-deps")
+    command.append("chromium")
+
+    result = subprocess.run(command)
     if result.returncode != 0:
         raise typer.Exit(result.returncode)
     console.print("[green]Chromium installed.[/]")

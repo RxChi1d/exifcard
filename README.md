@@ -28,7 +28,7 @@ uv run exifcard install-browser
 
 `uv sync` installs the exact dependency versions in `uv.lock` — the ones this tool is tested against. That matters more here than it usually does: HEIC encoding, JPEG quantization table passthrough and the lossless composite all rest on behaviour its dependencies do not document, so a drifted version can break a format rather than merely change a number.
 
-`install-browser` downloads the Chromium build that renders the info strip — see [How it works](#how-it-works).
+`install-browser` downloads the Chromium build that renders the info strip — see [How it works](#how-it-works). On Linux add `--with-deps`, which also installs the system libraries Chromium needs to start.
 
 Optionally install `jpegtran` (macOS `brew install jpeg-turbo`, Debian/Ubuntu `apt install libjpeg-turbo-progs`) if you want `--lossless`.
 
