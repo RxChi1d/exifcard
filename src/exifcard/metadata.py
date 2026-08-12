@@ -78,13 +78,16 @@ def format_focal_length(value, equivalent=None) -> str:
     48mm equivalent depending on the sensor crop, so two different framings
     would otherwise print the same number. Bodies that omit the tag -- mostly
     older DSLRs -- keep the physical value, which is what the card has always
-    shown, so nothing reads worse than before. Some bodies write 0 rather than
-    omitting the tag, which is the same statement and must not print as 0mm.
+    shown, so nothing reads worse than before, and a photo carrying neither
+    prints nothing at all.
+
+    Zero counts as absent at both steps. Some bodies write it instead of
+    leaving the tag out, which says the same thing, and no lens is 0mm.
     """
-    chosen = equivalent if equivalent else value
-    if chosen is None:
-        return ""
-    return f"{round(float(chosen))}mm"
+    for candidate in (equivalent, value):
+        if candidate is not None and float(candidate) > 0:
+            return f"{round(float(candidate))}mm"
+    return ""
 
 
 def format_aperture(value) -> str:
