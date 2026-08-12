@@ -83,7 +83,7 @@ Camera brand logo, body model, lens brand (only when it differs from the body's)
 
 Anything EXIF does not supply is left out — a manual lens reports no aperture, so the readout simply has one fewer value. Nothing is ever replaced with `Unknown` or a dash, and the strip keeps its height either way.
 
-Bundled wordmarks cover Canon, Fujifilm, Hasselblad, LUMIX, Olympus, Pentax, Ricoh, Sigma and Sony. Everything else — including Nikon, Leica and OM System, for which no usable wordmark exists in the public domain — falls back to the maker's name set in type, which the design specifies as a first-class state rather than a failure.
+Bundled marks cover Canon, Fujifilm, Hasselblad, Leica, LUMIX, Nikon, Olympus, OM System, Pentax, Ricoh, Sigma and Sony — wordmarks where one exists in the public domain, and the maker's square emblem where it does not. Anything else, phone makers included, falls back to the maker's name set in type, which the design specifies as a first-class state rather than a failure.
 
 ## Output
 

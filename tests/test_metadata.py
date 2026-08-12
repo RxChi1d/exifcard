@@ -86,3 +86,14 @@ def test_timeline_omits_what_is_missing_rather_than_padding_it():
     assert CardData(date="2026.03.14").timeline == "2026.03.14"
     assert CardData(location="Kyoto").timeline == "Kyoto"
     assert CardData().timeline == ""
+
+
+def test_square_emblem_brands_resolve_to_a_logo():
+    from exifcard import logos
+
+    for raw_make, model in (
+        ("NIKON CORPORATION", "NIKON D90"),
+        ("Leica Camera AG", "M11"),
+        ("OM Digital Solutions", "OM-1"),
+    ):
+        assert logos.find(metadata.normalize_make(raw_make), model) is not None

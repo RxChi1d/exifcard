@@ -107,17 +107,33 @@ def lens_brand_of(
     return ""
 
 
+def strip_body_prefix(lens_model: str, body_model: str) -> str:
+    """Drop the camera's own name from the front of its lens name.
+
+    Phones write the whole device into LensModel -- "iPhone 16 Pro back triple
+    camera 6.765mm f/1.78" -- and the card has already printed the body model
+    one line above. Repeating it says nothing and crowds the row.
+    """
+    body = (body_model or "").strip()
+    if not body or len(body) >= len(lens_model):
+        return lens_model
+    if lens_model.upper().startswith(body.upper()):
+        return lens_model[len(body) :].strip(" -") or lens_model
+    return lens_model
+
+
 def resolve_lens(
     lens_model: str | None,
     camera_make: str,
     name_table: dict[str, str],
     brand_table: dict[str, str] | None = None,
+    body_model: str = "",
 ) -> tuple[str, str]:
     """Turn a raw LensModel into the (brand, model) pair the card prints.
 
     Name tables are keyed on the raw EXIF string, so the lookup happens before
-    any brand prefix is peeled off; peeling is only the fallback for lenses
-    that have no table entry.
+    anything is peeled off; peeling is only the fallback for lenses that have
+    no table entry.
     """
     raw = (lens_model or "").strip()
     if not raw:
@@ -130,4 +146,4 @@ def resolve_lens(
 
     if brand and raw.upper().startswith(brand):
         return brand, raw[len(brand) :].strip() or raw
-    return brand, raw
+    return brand, strip_body_prefix(raw, body_model)

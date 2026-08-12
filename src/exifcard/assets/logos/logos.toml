@@ -12,9 +12,13 @@
 # Make value, and the Model field is what tells them apart.
 #
 # A brand with no rule here falls back to its name set in type, which is a
-# supported layout, not a failure. Nikon, Leica and OM System are deliberately
-# in that group: Commons carries no usable wordmark for them, only square
-# emblems that turn into an unreadable 11px blob at the size the card uses.
+# supported layout, not a failure. Phone makers are in that group on purpose.
+#
+# Most entries are wordmarks. Nikon, Leica and OM System have no wordmark in
+# the public domain, so they use the square emblem the maker actually puts on
+# the camera. Aligned by height like everything else, a square mark ends up
+# roughly a sixth as wide as a wordmark; that is what those brands look like,
+# and it is preferred here to spelling the name out in type.
 
 [[logo]]
 make = "SONY"
@@ -39,6 +43,31 @@ license = "Public domain (PD-textlogo)"
 make = "PANASONIC"
 file = "lumix.svg"
 source = "https://commons.wikimedia.org/wiki/File:Lumix_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "NIKON"
+file = "nikon.svg"
+source = "https://commons.wikimedia.org/wiki/File:Nikon_Logo.svg"
+license = "Public domain (PD-textlogo)"
+
+# Leica bodies write the Make with and without the company suffix.
+[[logo]]
+make = "LEICA CAMERA"
+file = "leica.svg"
+source = "https://commons.wikimedia.org/wiki/File:Leica_Camera_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "LEICA"
+file = "leica.svg"
+source = "https://commons.wikimedia.org/wiki/File:Leica_Camera_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "OM DIGITAL SOLUTIONS"
+file = "omsystem.svg"
+source = "https://commons.wikimedia.org/wiki/File:OM-System-Logo.svg"
 license = "Public domain (PD-textlogo)"
 
 [[logo]]

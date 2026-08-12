@@ -57,3 +57,22 @@ def test_brand_label_prefers_the_name_on_the_camera():
     # Anything unlisted keeps whatever the camera wrote.
     assert names.brand_label("HASSELBLAD", "Hasselblad") == "Hasselblad"
     assert names.brand_label("", "") == ""
+
+
+def test_body_name_is_not_repeated_in_the_lens_name():
+    # Phones write the whole device into LensModel; the card has already
+    # printed the body one line above.
+    brand, model = names.resolve_lens(
+        "iPhone 16 Pro back triple camera 6.765mm f/1.78",
+        "Apple",
+        {},
+        body_model="iPhone 16 Pro",
+    )
+    assert brand == ""
+    assert model == "back triple camera 6.765mm f/1.78"
+
+
+def test_body_prefix_stripping_leaves_unrelated_names_alone():
+    assert names.strip_body_prefix("XF 33mm F1.4 R LM WR", "X-T5") == "XF 33mm F1.4 R LM WR"
+    assert names.strip_body_prefix("X-T5", "X-T5") == "X-T5"
+    assert names.strip_body_prefix("56mm F1.4", "") == "56mm F1.4"

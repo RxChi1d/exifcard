@@ -156,6 +156,7 @@ def read(path: Path, image: Image.Image | None = None, gear: GearTables | None =
         data.make,
         {**names.LENS_NAMES, **gear.lens},
         gear.lens_brand,
+        body_model=clean(exif.get(_TAG["Model"])),
     )
 
     data.exposure = SEPARATOR.join(

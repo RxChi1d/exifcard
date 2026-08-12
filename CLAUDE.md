@@ -78,7 +78,7 @@ These are settled decisions, not defaults. Changing one is a design change.
 Everything the program reads at runtime lives in `src/exifcard/assets/` so it ships in the wheel. Anything only humans look at lives in `docs/`.
 
 - `assets/fonts/` — Archivo, JetBrains Mono, Noto Sans, with their OFL texts. **Archivo has no Greek alpha**, and Sony bodies display as `α7C II`; Noto Sans is bundled as the fallback that covers it.
-- `assets/logos/` — public-domain wordmarks with provenance in `logos.toml`. Nikon, Leica and OM System are deliberately absent: Commons carries only square emblems for them, which become an unreadable blob at 11px. They use the text fallback.
+- `assets/logos/` — public-domain brand marks with provenance in `logos.toml`. Mostly wordmarks; Nikon, Leica and OM System have none in the public domain and use the maker's square emblem instead, which aligned by height comes out roughly a sixth as wide. Phone makers have no entry and use the text fallback.
 
 `test-photos/` holds real camera files and is gitignored — they carry GPS and are not ours to publish.
 
