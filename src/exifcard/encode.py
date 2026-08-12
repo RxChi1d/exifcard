@@ -60,7 +60,13 @@ def format_for(path: Path) -> str | None:
 
 
 def source_jpeg_params(photo_path: Path) -> dict:
-    """Quantization tables and chroma sampling as the camera wrote them."""
+    """Quantization tables and chroma sampling as the camera wrote them.
+
+    Only the lossless path wants these: jpegtran drops the source's DCT
+    coefficients into the canvas, so the canvas has to be quantized the same
+    way. Reusing them for ordinary output would make a card slightly larger
+    than the photo it came from, which is not what a card is for.
+    """
     with Image.open(photo_path) as im:
         if im.format not in ("JPEG", "MPO"):
             return {}
@@ -69,6 +75,23 @@ def source_jpeg_params(photo_path: Path) -> dict:
             "qtables": im.quantization,
             "subsampling": JpegImagePlugin.get_sampling(im),
         }
+
+
+def source_subsampling(photo_path: Path) -> int | None:
+    """The camera's chroma sampling, or None when it cannot be read.
+
+    Worth carrying over even though the quantization tables are not: a camera
+    that shot 4:2:2 keeps its colour resolution instead of being quietly
+    halved to Pillow's 4:2:0 default, for about 8% more file size.
+    """
+    try:
+        with Image.open(photo_path) as im:
+            if im.format not in ("JPEG", "MPO"):
+                return None
+            im.load()
+            return JpegImagePlugin.get_sampling(im)
+    except (OSError, ValueError):
+        return None
 
 
 def jpegtran_available() -> bool:
@@ -145,7 +168,7 @@ def save(
     destination: Path,
     fmt: str,
     quality: int | None = None,
-    source_params: dict | None = None,
+    subsampling: int | None = None,
     exif: bytes | None = None,
     icc_profile: bytes | None = None,
 ) -> None:
@@ -157,12 +180,9 @@ def save(
         options["icc_profile"] = icc_profile
 
     if fmt == "jpg":
-        if quality is not None:
-            options["quality"] = quality
-        elif source_params:
-            options.update(source_params)
-        else:
-            options["quality"] = DEFAULT_JPEG_QUALITY
+        options["quality"] = DEFAULT_JPEG_QUALITY if quality is None else quality
+        if subsampling is not None:
+            options["subsampling"] = subsampling
         card.save(destination, format="JPEG", **options)
 
     elif fmt == "png":

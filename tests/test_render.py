@@ -13,7 +13,7 @@ pytest.importorskip("playwright.sync_api")
 
 @pytest.fixture
 def photo(tmp_path):
-    """A 3:2 photo with the EXIF fields the card reads."""
+    """A 3:2 photo written the way a camera writes one: fine tables, 4:2:2."""
     path = tmp_path / "DSC00001.JPG"
     image = Image.effect_mandelbrot((1200, 800), (-2, -1.5, 1, 1.5), 60).convert("RGB")
 
@@ -28,7 +28,9 @@ def photo(tmp_path):
     ifd[0x8827] = 400
     ifd[0x9003] = "2026:03:14 08:12:00"
     ifd[0xA434] = "TAMRON 25-200mm F2.8-5.6 A075 E"
-    image.save(path, exif=exif, quality=95)
+    # Camera-like encoding: near-flat quantization tables and 4:2:2, which is
+    # what makes reusing them for output such an expensive mistake.
+    image.save(path, exif=exif, qtables=[[1] * 64, [1] * 64], subsampling=1)
     return path
 
 
@@ -42,13 +44,32 @@ def test_card_is_the_photo_plus_a_strip(photo, tmp_path):
     assert height > 800  # and taller by the strip
 
 
-def test_photo_pixels_survive_the_default_encode(photo, tmp_path):
-    """The default is lossy, but only just.
+def test_the_default_does_not_inherit_the_camera_quantization_tables(photo, tmp_path):
+    """A card is a derivative for looking at, so it should be compressed.
 
-    Re-encoding with the source's own quantization tables keeps the photo close
-    enough that the difference is invisible, which is the point: a card is for
-    looking at, and the original is still in the library.
+    Reusing the source's tables made a card of a 33MP camera file come out at
+    104% of the original's size -- no compression at all. Nothing else here
+    would have caught it: every other check only asks whether the picture
+    still looks right, and by that measure the uncompressed version looked
+    better.
     """
+    with Image.open(photo) as source:
+        source.load()
+        camera_tables = encode.source_jpeg_params(photo)
+
+    default = tmp_path / "default.jpg"
+    render.render(photo, default, render.Options())
+
+    as_camera_wrote_it = tmp_path / "camera-tables.jpg"
+    with Image.open(default) as card:
+        card.load()
+        card.save(as_camera_wrote_it, format="JPEG", **camera_tables)
+
+    assert default.stat().st_size < as_camera_wrote_it.stat().st_size * 0.75
+
+
+def test_the_default_stays_visually_faithful(photo, tmp_path):
+    """Lossy, but not visibly so."""
     destination = tmp_path / "card.jpg"
     render.render(photo, destination, render.Options())
 
@@ -56,7 +77,20 @@ def test_photo_pixels_survive_the_default_encode(photo, tmp_path):
     card = np.asarray(Image.open(destination).convert("RGB")).astype(np.int16)
     difference = np.abs(card[: original.shape[0], : original.shape[1]] - original)
 
-    assert difference.mean() < 1.0
+    assert difference.mean() < 2.0
+
+
+def test_the_camera_chroma_sampling_is_carried_over(photo, tmp_path):
+    """A camera that shot 4:2:2 keeps it, rather than being halved to 4:2:0."""
+    from PIL import JpegImagePlugin
+
+    destination = tmp_path / "card.jpg"
+    render.render(photo, destination, render.Options())
+
+    with Image.open(photo) as source, Image.open(destination) as card:
+        source.load()
+        card.load()
+        assert JpegImagePlugin.get_sampling(card) == JpegImagePlugin.get_sampling(source)
 
 
 def test_output_orientation_is_normalized(photo, tmp_path):

@@ -71,7 +71,7 @@ These are settled decisions, not defaults. Changing one is a design change.
 ## Output policy
 
 - Format follows the input unless `--format` overrides it.
-- JPEG re-encodes with the **source's own quantization tables and chroma subsampling**, not a quality number. Measured on a 33MP file: `quality=95` gives 6.06MB from an 18.76MB source (mean deviation 1.08); source tables give 18.94MB (mean deviation 0.23).
+- JPEG defaults to `quality=95` and carries over the **source's chroma subsampling** only. Do not reuse the source's quantization tables here: on a 33MP file that yields 19.6MB from an 18.8MB original -- a "card" larger than the photo, which is the opposite of what a card is for. Those tables belong solely to the `--lossless` path, where jpegtran needs the canvas quantized to match the coefficients it drops in. `tests/test_render.py` pins this, because every other check only asks whether the picture looks right, and the uncompressed version looked better.
 - HEIC needs `GRID_TILE_SIZE` set or libheif produces an undecodable file above roughly 28MP. Tiling costs about 1% in size.
 - `--lossless` uses `jpegtran -drop` and requires photo dimensions that are multiples of 16. It raises rather than falling back: a promise that silently degrades is worse than an error.
 - Default output width is the photo's native resolution. Compression is invisible, resolution loss is not.

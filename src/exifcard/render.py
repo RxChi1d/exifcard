@@ -163,11 +163,7 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
                 destination,
                 fmt,
                 quality=options.quality,
-                source_params=(
-                    encode.source_jpeg_params(photo_path)
-                    if fmt == "jpg" and options.quality is None
-                    else None
-                ),
+                subsampling=encode.source_subsampling(photo_path) if fmt == "jpg" else None,
                 exif=exif,
                 icc_profile=icc,
             )

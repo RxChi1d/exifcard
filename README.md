@@ -102,7 +102,9 @@ Anything else falls back to the maker's name set in type, which the design speci
 
 Format follows the input (`jpg`, `png`, `heic`) unless `--format` says otherwise, which keeps each file on the encoder that suits it.
 
-Defaults are lossy, because a card is a derivative made for looking at while the original stays in your library. What they will not do is throw away more than they have to: a JPEG is re-encoded with the quantization tables and chroma sampling read off the source rather than a guessed quality number. On a 33MP camera file, `--quality 95` would produce 6MB from an 18.8MB original; matching the source's own tables produces 18.9MB with a fifth of the deviation.
+Defaults are lossy, because a card is a derivative made for looking at while the original stays in your library. On a 33MP camera file, the default produces 6.8MB from an 18.8MB original, at a mean deviation of about 1 level in 255 — invisible at any viewing size.
+
+What it does carry over is the camera's chroma sampling: a body that shot 4:2:2 keeps its colour resolution instead of being quietly halved to 4:2:0, for about 8% more file size.
 
 `--quality` is passed straight to the encoder, so its scale differs per format and the numbers are not comparable — `heic 70` is roughly `jpg 95`.
 
