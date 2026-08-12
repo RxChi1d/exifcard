@@ -1,0 +1,189 @@
+# Camera brand logos.
+#
+# Every file here is a wordmark taken from Wikimedia Commons under a public
+# domain tag (PD-textlogo: plain lettering is below the threshold of
+# originality, so no copyright subsists). The marks are still trademarks; this
+# tool uses them nominatively, to identify the camera a photo was taken with.
+#
+# Rules are matched top to bottom. `make` is compared against the EXIF Make
+# field after normalization (uppercased, corporate suffixes stripped).
+# `model_prefix`, when present, must also match the start of the EXIF Model
+# field -- Ricoh Imaging ships both RICOH- and PENTAX-branded bodies under one
+# Make value, and the Model field is what tells them apart.
+#
+# A brand with no rule here falls back to its name set in type, which is a
+# supported layout, not a failure. Phone makers are in that group on purpose.
+#
+# Most entries are wordmarks. Nikon, Leica and OM System have no wordmark in
+# the public domain, so they use the square emblem the maker actually puts on
+# the camera. Aligned by height like everything else, a square mark ends up
+# roughly a sixth as wide as a wordmark; that is what those brands look like,
+# and it is preferred here to spelling the name out in type.
+
+[[logo]]
+make = "SONY"
+file = "sony.svg"
+source = "https://commons.wikimedia.org/wiki/File:Sony_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "FUJIFILM"
+file = "fujifilm.svg"
+source = "https://commons.wikimedia.org/wiki/File:Fujifilm_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "CANON"
+file = "canon.svg"
+source = "https://commons.wikimedia.org/wiki/File:Canon_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+# Panasonic cameras carry LUMIX branding, but write "Panasonic" as the Make.
+[[logo]]
+make = "PANASONIC"
+file = "lumix.svg"
+source = "https://commons.wikimedia.org/wiki/File:Lumix_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "NIKON"
+file = "nikon.svg"
+source = "https://commons.wikimedia.org/wiki/File:Nikon_Logo.svg"
+license = "Public domain (PD-textlogo)"
+
+# Leica bodies write the Make with and without the company suffix.
+[[logo]]
+make = "LEICA CAMERA"
+file = "leica.svg"
+source = "https://commons.wikimedia.org/wiki/File:Leica_Camera_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "LEICA"
+file = "leica.svg"
+source = "https://commons.wikimedia.org/wiki/File:Leica_Camera_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "OM DIGITAL SOLUTIONS"
+file = "omsystem.svg"
+source = "https://commons.wikimedia.org/wiki/File:OM-System-Logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "OLYMPUS"
+file = "olympus.svg"
+source = "https://commons.wikimedia.org/wiki/File:Olympus_Corporation_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+# Ricoh Imaging: the Model field carries the consumer brand.
+[[logo]]
+make = "RICOH"
+model_prefix = "PENTAX"
+file = "pentax.svg"
+source = "https://commons.wikimedia.org/wiki/File:Pentax_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "RICOH"
+model_prefix = "RICOH"
+file = "ricoh.svg"
+source = "https://commons.wikimedia.org/wiki/File:Ricoh_logo_2005.svg"
+license = "Public domain (PD-textlogo)"
+
+# Older Pentax bodies wrote PENTAX as the Make directly.
+[[logo]]
+make = "PENTAX"
+file = "pentax.svg"
+source = "https://commons.wikimedia.org/wiki/File:Pentax_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "HASSELBLAD"
+file = "hasselblad.svg"
+source = "https://commons.wikimedia.org/wiki/File:Hasselblad_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "SIGMA"
+file = "sigma.svg"
+source = "https://commons.wikimedia.org/wiki/File:SIGMA_CORPORATION.svg"
+license = "Public domain (PD-textlogo)"
+
+# Phone makers. A phone is the camera that took the photo, so its maker belongs
+# on the card the same way Canon's does. Nothing is deliberately absent: its
+# mark is white lettering on a solid black field, which on warm paper at 11px
+# reads as a black bar rather than a logo.
+
+[[logo]]
+make = "APPLE"
+file = "apple.svg"
+source = "https://commons.wikimedia.org/wiki/File:Apple_logo_black.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "GOOGLE"
+file = "google.svg"
+source = "https://commons.wikimedia.org/wiki/File:Google_2015_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "SAMSUNG"
+file = "samsung.svg"
+source = "https://commons.wikimedia.org/wiki/File:Samsung_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "XIAOMI"
+file = "xiaomi.svg"
+source = "https://commons.wikimedia.org/wiki/File:Xiaomi_logo_(2021-).svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "ONEPLUS"
+file = "oneplus.svg"
+source = "https://commons.wikimedia.org/wiki/File:Oneplus_Logo_(2021).svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "HUAWEI"
+file = "huawei.svg"
+source = "https://commons.wikimedia.org/wiki/File:Huawei_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "OPPO"
+file = "oppo.svg"
+source = "https://commons.wikimedia.org/wiki/File:OPPO_Logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "VIVO"
+file = "vivo.svg"
+source = "https://commons.wikimedia.org/wiki/File:Vivo_logo_2019.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "HONOR"
+file = "honor.svg"
+source = "https://commons.wikimedia.org/wiki/File:LOGO_Honor.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "MOTOROLA"
+file = "motorola.svg"
+source = "https://commons.wikimedia.org/wiki/File:Motorola_new_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+# ASUS phones write the full legal name, which normalizes to ASUSTEK COMPUTER.
+[[logo]]
+make = "ASUSTEK COMPUTER"
+file = "asus.svg"
+source = "https://commons.wikimedia.org/wiki/File:Asus_blue_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "ASUS"
+file = "asus.svg"
+source = "https://commons.wikimedia.org/wiki/File:Asus_blue_logo.svg"
+license = "Public domain (PD-textlogo)"

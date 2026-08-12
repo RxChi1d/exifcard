@@ -1,0 +1,43 @@
+[project]
+name = "exifcard"
+version = "0.1.0"
+description = "Local CLI tool that renders a photo and its EXIF metadata into a finished card image"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+dependencies = [
+    "pillow>=12.0.0",
+    "pillow-heif>=1.5.0",
+    "playwright>=1.62.0",
+    "numpy>=2.0.0",
+    "typer>=0.27.0",
+    "fonttools>=4.55.0",
+]
+
+[project.scripts]
+exifcard = "exifcard.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/exifcard"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/exifcard/assets" = "exifcard/assets"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "golden: compares rendered pixels against a reference image. Run locally; excluded in CI because text rasterization differs between platforms.",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
