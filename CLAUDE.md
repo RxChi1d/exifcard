@@ -13,6 +13,7 @@ Scope boundary: a command-line tool, run locally, over local files. **Not** an A
 ```sh
 uv sync                                  # install, including dev group
 uv run playwright install chromium       # once, before anything renders
+uv build --wheel                         # verify the package still builds
 uv run pytest                            # full suite, ~8s
 uv run pytest -m "not golden"            # what CI runs
 uv run pytest tests/test_names.py -k brand   # one file / one test
@@ -79,6 +80,8 @@ These are settled decisions, not defaults. Changing one is a design change.
 ## Assets
 
 Everything the program reads at runtime lives in `src/exifcard/assets/` so it ships in the wheel. Anything only humans look at lives in `docs/`.
+
+Assets are collected because they sit inside the package directory; do **not** add a `force-include` for them, which makes hatchling see every file twice and refuse to build. `tests/test_packaging.py` builds a wheel and checks the assets are in it, because nothing else notices a broken package until someone tries to install it.
 
 - `assets/fonts/` — Archivo, JetBrains Mono, Noto Sans, with their OFL texts. **Archivo has no Greek alpha**, and Sony bodies display as `α7C II`; Noto Sans is bundled as the fallback that covers it.
 - `assets/logos/` — public-domain brand marks with provenance in `logos.toml`, covering camera and phone makers alike: a phone is the camera that took the photo. Mostly wordmarks; Nikon, Leica, OM System, Apple, Xiaomi and OnePlus have none in the public domain and use the maker's square emblem, which aligned by height comes out roughly a sixth as wide. A mark is only bundled if it survives 11px on warm paper — Nothing's white-on-black lettering does not, so it uses the text fallback.

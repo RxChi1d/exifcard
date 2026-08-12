@@ -28,8 +28,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
+      # Deliberately the command the README tells people to run, so CI fails if
+      # that path ever stops working. --with-deps pulls Chromium's system
+      # libraries, without which it downloads but will not start on Linux.
       - if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: uv run playwright install --with-deps chromium
+        run: uv run exifcard install-browser --with-deps
 
       - run: sudo apt-get install -y libjpeg-turbo-progs
 

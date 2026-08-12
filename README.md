@@ -21,18 +21,36 @@ The layout is the same in every one — same proportions, same alignment, no sep
 ## Install
 
 ```sh
-uv tool install git+https://github.com/RxChi1d/exifcard
-playwright install chromium
+git clone https://github.com/RxChi1d/exifcard && cd exifcard
+uv sync
+uv run exifcard install-browser
 ```
 
-Chromium renders the info strip — see [How it works](#how-it-works). Optionally install `jpegtran` (macOS `brew install jpeg-turbo`, Debian/Ubuntu `apt install libjpeg-turbo-progs`) if you want `--lossless`.
+`uv sync` installs the exact dependency versions in `uv.lock` — the ones this tool is tested against. That matters more here than it usually does: HEIC encoding, JPEG quantization table passthrough and the lossless composite all rest on behaviour its dependencies do not document, so a drifted version can break a format rather than merely change a number.
+
+`install-browser` downloads the Chromium build that renders the info strip — see [How it works](#how-it-works). On Linux add `--with-deps`, which also installs the system libraries Chromium needs to start.
+
+Optionally install `jpegtran` (macOS `brew install jpeg-turbo`, Debian/Ubuntu `apt install libjpeg-turbo-progs`) if you want `--lossless`.
+
+### As a global command
+
+If you would rather have `exifcard` on your PATH everywhere:
+
+```sh
+uv tool install git+https://github.com/RxChi1d/exifcard
+exifcard install-browser
+```
+
+The trade-off is that a tool install resolves dependencies afresh instead of reading `uv.lock`, so you get whatever satisfies the version ranges on the day you install rather than the combination the tests ran against.
 
 ## Use
 
+From a clone, prefix the commands below with `uv run`, or add `--project /path/to/exifcard` to run them from wherever your photos are. A tool install skips the prefix.
+
 ```sh
-exifcard render photo.jpg                       # one photo
-exifcard render ./kyoto/ --location "Kyoto"     # a whole folder, one caption
-exifcard render ./kyoto/ --dry-run              # show what would be written
+uv run exifcard render photo.jpg                     # one photo
+uv run exifcard render ./kyoto/ --location "Kyoto"   # a whole folder, one caption
+uv run exifcard render ./kyoto/ --dry-run            # show what would be written
 ```
 
 The source folder is never written to, so pointing the tool at a backup or a photo library leaves it untouched.
@@ -55,7 +73,7 @@ failed:
 A coordinate has many true names at once — a road, a neighbourhood, a ward, a city — and none of them is reliably the one the photograph is about. `Fushimi Inari` is a choice about what the picture shows, so captions are written by hand. The tool only saves you from typing filenames:
 
 ```sh
-exifcard locations ./kyoto/          # append every photo to a locations.toml
+uv run exifcard locations ./kyoto/     # append every photo to a locations.toml
 ```
 
 ```toml
@@ -71,7 +89,7 @@ Empty means no location, which is a designed state: the date line simply stands 
 ### Configuration
 
 ```sh
-exifcard config-example > ~/.config/exifcard/config.toml
+uv run exifcard config-example > ~/.config/exifcard/config.toml
 ```
 
 Holds the things that are stable across every album — the path to your signature, and the display-name tables:

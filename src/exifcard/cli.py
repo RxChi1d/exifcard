@@ -29,6 +29,11 @@ IO_PANEL = "Input and output"
 ENCODE_PANEL = "Encoding"
 CARD_PANEL = "Card"
 
+BROWSER_HINT = (
+    "Chromium is missing. Run [bold]exifcard install-browser[/] once, then try again."
+)
+
+
 QUALITY_HELP = (
     "Encoder quality. The scale differs per format and the numbers are not "
     "comparable: jpg 1-100 (default 95, plus the source's own chroma sampling), "
@@ -234,10 +239,17 @@ def render_cards(
     written = skipped = 0
     failures: list[tuple[Path, str]] = []
 
+    from playwright.sync_api import Error as PlaywrightError
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as pw:
-        browser = pw.chromium.launch()
+        try:
+            browser = pw.chromium.launch()
+        except PlaywrightError as failure:
+            if "Executable doesn't exist" in str(failure):
+                err.print(f"[red]{BROWSER_HINT}[/]")
+                raise typer.Exit(1) from None
+            raise
         try:
             with Progress(
                 TextColumn("[progress.description]{task.description}"),
@@ -329,6 +341,38 @@ def locations_cmd(
 
     added = locations.scaffold(target, entries)
     console.print(f"[green]{added}[/] new entr{'y' if added == 1 else 'ies'} appended to {target}")
+
+
+@app.command("install-browser")
+def install_browser(
+    with_deps: Annotated[
+        bool,
+        typer.Option(
+            "--with-deps",
+            help="Also install Chromium's system libraries. Needed on most Linux "
+            "distributions, where the browser otherwise downloads but will not start. "
+            "Uses sudo.",
+        ),
+    ] = False,
+) -> None:
+    """Download the Chromium build used to render the info strip.
+
+    Playwright keeps its browsers outside the Python package, so this has to
+    happen once after installing. It is a command of its own because an
+    installed tool exposes only exifcard's own entry point -- `playwright` is
+    not on PATH, so the usual `playwright install chromium` is not available.
+    """
+    import subprocess
+
+    command = [sys.executable, "-m", "playwright", "install"]
+    if with_deps:
+        command.append("--with-deps")
+    command.append("chromium")
+
+    result = subprocess.run(command)
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
+    console.print("[green]Chromium installed.[/]")
 
 
 @app.command("config-example")
