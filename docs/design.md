@@ -102,6 +102,22 @@ Both widths are measured in the browser from the real text, per photo, starting 
 
 This is also why the display-name tables are not for shortening. They turn an internal code into the product's actual name (`ILCE-7CM2` → `α7C II`); deciding which words of a name matter is not the tool's call.
 
+## Focal length
+
+The card prints the 35mm-equivalent focal length when the camera records one, and the physical value when it does not.
+
+The physical number is what the lens barrel says, which argues for showing it, but it cannot record what was actually framed. Measured on one iPhone 16 Pro:
+
+```
+                    FocalLength   FocalLengthIn35mmFilm
+IMG_4350.heic         6.765mm             48mm
+IMG_4355.JPG          6.765mm             30mm
+```
+
+Two different framings, one number. The sensor crop is what changed, and only the equivalent value carries it. The same applies less dramatically to any crop-sensor body: an X-E5 at 17mm frames like 26mm.
+
+Older DSLRs — a Canon EOS 700D, a Nikon D90 — omit the tag entirely, so those cards keep the physical value. That leaves two bases in use across a collection without the card saying which, and the alternative was rejected: marking the equivalent ones would put a symbol on modern bodies and not on old ones, drawing attention to a distinction most readers do not care about. The fallback is also what the card always showed, so no photo reads worse than it did before.
+
 ## Bundled assets
 
 Fonts and brand marks ship inside the package, so a card renders identically on any machine and the tool works offline. All are freely licensed: fonts under the SIL Open Font License, brand marks in the public domain as `PD-textlogo`, with each mark's source recorded in `logos.toml`.

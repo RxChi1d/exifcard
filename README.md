@@ -118,6 +118,8 @@ Gear names appear exactly as EXIF reports them unless a table renames them, so a
 
 Camera brand logo, body model, lens brand (only when it differs from the body's), lens model, focal length, aperture, shutter speed, ISO, date, an optional location, and an optional handwritten signature.
 
+Focal length is the 35mm equivalent where the camera records one, since the physical value cannot tell two framings apart on a phone. ([Why](docs/design.md#focal-length).)
+
 Anything EXIF does not supply is left out — a manual lens reports no aperture, so the readout simply has one fewer value. Nothing is ever replaced with `Unknown` or a dash, and the strip keeps its height either way.
 
 Bundled marks cover cameras — Canon, Fujifilm, Hasselblad, Leica, LUMIX, Nikon, Olympus, OM System, Pentax, Ricoh, Sigma, Sony — and phones, since a phone is the camera that took the photo: Apple, ASUS, Google, HONOR, Huawei, Motorola, OnePlus, OPPO, Samsung, vivo, Xiaomi. Wordmarks where one exists in the public domain, the maker's square emblem where it does not.
