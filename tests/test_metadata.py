@@ -97,3 +97,16 @@ def test_square_emblem_brands_resolve_to_a_logo():
         ("OM Digital Solutions", "OM-1"),
     ):
         assert logos.find(metadata.normalize_make(raw_make), model) is not None
+
+
+def test_phone_makers_resolve_to_a_logo():
+    from exifcard import logos
+
+    # A phone is the camera that took the photo, so its maker gets a mark too.
+    for raw_make, model in (
+        ("Apple", "iPhone 16 Pro"),
+        ("Google", "Pixel 9 Pro"),
+        ("samsung", "SM-S928B"),
+        ("ASUSTeK COMPUTER INC.", "ASUS_AI2401"),
+    ):
+        assert logos.find(metadata.normalize_make(raw_make), model) is not None

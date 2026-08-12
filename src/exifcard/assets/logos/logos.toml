@@ -109,3 +109,81 @@ make = "SIGMA"
 file = "sigma.svg"
 source = "https://commons.wikimedia.org/wiki/File:SIGMA_CORPORATION.svg"
 license = "Public domain (PD-textlogo)"
+
+# Phone makers. A phone is the camera that took the photo, so its maker belongs
+# on the card the same way Canon's does. Nothing is deliberately absent: its
+# mark is white lettering on a solid black field, which on warm paper at 11px
+# reads as a black bar rather than a logo.
+
+[[logo]]
+make = "APPLE"
+file = "apple.svg"
+source = "https://commons.wikimedia.org/wiki/File:Apple_logo_black.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "GOOGLE"
+file = "google.svg"
+source = "https://commons.wikimedia.org/wiki/File:Google_2015_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "SAMSUNG"
+file = "samsung.svg"
+source = "https://commons.wikimedia.org/wiki/File:Samsung_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "XIAOMI"
+file = "xiaomi.svg"
+source = "https://commons.wikimedia.org/wiki/File:Xiaomi_logo_(2021-).svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "ONEPLUS"
+file = "oneplus.svg"
+source = "https://commons.wikimedia.org/wiki/File:Oneplus_Logo_(2021).svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "HUAWEI"
+file = "huawei.svg"
+source = "https://commons.wikimedia.org/wiki/File:Huawei_wordmark.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "OPPO"
+file = "oppo.svg"
+source = "https://commons.wikimedia.org/wiki/File:OPPO_Logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "VIVO"
+file = "vivo.svg"
+source = "https://commons.wikimedia.org/wiki/File:Vivo_logo_2019.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "HONOR"
+file = "honor.svg"
+source = "https://commons.wikimedia.org/wiki/File:LOGO_Honor.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "MOTOROLA"
+file = "motorola.svg"
+source = "https://commons.wikimedia.org/wiki/File:Motorola_new_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+# ASUS phones write the full legal name, which normalizes to ASUSTEK COMPUTER.
+[[logo]]
+make = "ASUSTEK COMPUTER"
+file = "asus.svg"
+source = "https://commons.wikimedia.org/wiki/File:Asus_blue_logo.svg"
+license = "Public domain (PD-textlogo)"
+
+[[logo]]
+make = "ASUS"
+file = "asus.svg"
+source = "https://commons.wikimedia.org/wiki/File:Asus_blue_logo.svg"
+license = "Public domain (PD-textlogo)"
