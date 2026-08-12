@@ -1,3 +1,5 @@
+**English** | [繁體中文](design.zh-TW.md)
+
 # Design notes
 
 The decisions behind exifcard and the constraints that produced them. The [README](../README.md) covers what it does and how to run it; this document is for anyone changing the code or evaluating the engineering.
