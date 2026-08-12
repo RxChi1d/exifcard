@@ -53,6 +53,12 @@ uv run exifcard render ./kyoto/ --location "Kyoto"   # a whole folder, one capti
 uv run exifcard render ./kyoto/ --dry-run            # show what would be written
 ```
 
+You will not have a signature file to hand on a first run, so one is included to try the feature with:
+
+```sh
+uv run exifcard render photo.jpg --signature examples/signature.png
+```
+
 The source folder is never written to, so pointing the tool at a backup or a photo library leaves it untouched.
 
 Cards land in `outputs/<source folder name>/`, mirroring the source layout. Two albums passed in one run stay apart, and `--recursive` keeps a nested folder nested rather than flattening subfolders from different albums into one directory.

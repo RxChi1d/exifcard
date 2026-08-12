@@ -69,6 +69,8 @@ Each of these is silent, or costs more than the fix. The code says so where it h
 - **Bundled marks must survive 11px on warm paper**, which is the size they are actually used at. `logos.toml` records why each one is present or absent.
 - `test-photos/` holds real camera files and is gitignored: they carry GPS and are not ours to publish.
 
+Directories are organised by who uses a file: `src/exifcard/assets/` is read by the program and ships in the wheel, `docs/` is read by people, `examples/` is run by users, `tests/` by the suite. A file in the wrong one tends to become an orphan.
+
 ## Conventions
 
 Write code comments and config-file comments in English.
