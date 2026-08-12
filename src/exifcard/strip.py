@@ -49,9 +49,20 @@ class StripSpec:
     tight: bool = False
 
 
+def _file_url(path: Path) -> str:
+    """A file:// URL the browser will accept on any platform.
+
+    Interpolating the path into the string yields `file://C:\\...` on Windows,
+    which is neither a valid authority nor a valid path, so the fonts and
+    images simply fail to load and the strip renders in whatever the browser
+    falls back to.
+    """
+    return path.resolve().as_uri()
+
+
 def _font_faces() -> str:
     return "\n".join(
-        f"@font-face{{font-family:'{family}';src:url('file://{FONTS / filename}');"
+        f"@font-face{{font-family:'{family}';src:url('{_file_url(FONTS / filename)}');"
         f"font-weight:100 900;font-display:block}}"
         for family, filename in _FONT_FACES
     )
@@ -78,7 +89,7 @@ def build_html(spec: StripSpec) -> str:
 
     if spec.logo:
         brand = (
-            f'<img src="file://{spec.logo}" alt="" '
+            f'<img src="{_file_url(spec.logo)}" alt="" '
             f'style="height:{layout.LOGO_HEIGHT}px;width:auto;display:block;'
             f'opacity:{layout.LOGO_OPACITY}">'
         )
@@ -144,7 +155,7 @@ def build_html(spec: StripSpec) -> str:
     )
 
     signature = (
-        f'<img src="file://{spec.signature}" alt="" '
+        f'<img src="{_file_url(spec.signature)}" alt="" '
         f'style="width:{spec.signature_width}px;height:auto;display:block;flex:none;'
         f'opacity:{layout.SIGNATURE_OPACITY};margin-bottom:{layout.SIGNATURE_BASELINE_NUDGE}px">'
         if spec.signature
