@@ -102,6 +102,40 @@ Both widths are measured in the browser from the real text, per photo, starting 
 
 This is also why the display-name tables are not for shortening. They turn an internal code into the product's actual name (`ILCE-7CM2` → `α7C II`); deciding which words of a name matter is not the tool's call.
 
+Widening is uncapped on purpose. A ceiling would stop the canvas growing and put the overrunning text straight back on top of the signature at the ceiling's width — the same failure, reached by a different route. Past 900 the run says so instead, naming the gear table entry that would bring the card back to full size.
+
+## What the caption may ask for
+
+The two-step adaptation belongs to the gear names. It does not extend to the location caption, and the difference is not stylistic:
+
+|  | gear name | caption |
+|---|---|---|
+| where it comes from | EXIF | the user typed it |
+| length | bounded by what the product is called | unbounded |
+| may be shortened | only by a gear table entry, which changes **every** card in the album carrying that lens | by editing one line |
+| obligation to print in full | identification — a lens shortened past recognition is worthless | none; the design already allows no caption at all |
+
+So the canvas is settled by the photo's proportions and the gear names alone, measured with the caption removed. The caption is then held to what is left beside the signature. It may have the first step, tightening, which costs no type size; it may not have the second. A caption that widened the canvas would set one card's type smaller than every other card in the album, with nothing on the card to say why, on the strength of a line its author could have shortened in a second.
+
+When it does not fit, that photo fails and the run reports the geometry:
+
+```
+IMG_4821.HEIC  the location does not fit: it needs 334 design px of the 282 left
+               beside the signature (canvas 450); shorten it in locations.toml
+```
+
+Geometry rather than a character limit, because there is no stable character limit: 80 dotted i's, 80 ideographs and 80 capitals are three different widths, and the date shares the line with all of them.
+
+The budget, in design pixels:
+
+| card | the whole line | after the `YYYY.MM.DD · ` prefix |
+|---|---|---|
+| 3:2 landscape, with a signature | 592 | 510 |
+| 3:2 landscape, no signature | 720 | 638 |
+| 9:16 portrait, with a signature | 282 | 200 |
+
+The last row is what this rule costs: `Fushimi Inari, Kyoto` measures 208 against that column's 282, so one more short word fits and a second does not. For an album shot mostly in portrait that is the common case rather than the exception — accepted, because that line is the only thing on the card its author can shorten at no cost.
+
 ## Focal length
 
 The focal length on the card is the **35mm equivalent**, not the physical length engraved on the lens. Three steps, in order:

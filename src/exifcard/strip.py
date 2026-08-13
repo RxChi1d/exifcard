@@ -180,7 +180,7 @@ def build_html(spec: StripSpec) -> str:
     )
 
     timeline = (
-        f'<div style="font-family:{mono_font};font-size:{layout.SIZE_DATE}px;'
+        f'<div id="timeline" style="font-family:{mono_font};font-size:{layout.SIZE_DATE}px;'
         f"letter-spacing:{layout.TRACK_DATE}em;color:{layout.COLOR_DATE};"
         f"line-height:{layout.LINE_HEIGHT};"
         f'white-space:nowrap">{html.escape(d.timeline)}</div>'
@@ -236,20 +236,13 @@ class Demand(NamedTuple):
     tight: float
 
 
-def demand(spec: StripSpec, browser=None) -> Demand:
-    """Measure what this strip's content requires, in design pixels.
-
-    Both figures come from one pass over a canvas that starts at its
-    ratio-derived width, so the result depends only on this photo's content,
-    never on what was rendered before it.
-    """
+def _evaluate(html_source: str, canvas_width: float, script: str, arg=None, browser=None):
+    """Lay the strip out in a page and run one measuring script over it."""
     from playwright.sync_api import sync_playwright
 
-    html_source = build_html(replace(spec, tight=False))
-
-    def probe(page_browser) -> tuple[float, float, float]:
+    def run(page_browser):
         page = page_browser.new_page(
-            viewport={"width": max(1, round(spec.canvas_width)), "height": 400}
+            viewport={"width": max(1, round(canvas_width)), "height": 400}
         )
         try:
             with tempfile.TemporaryDirectory() as tmp:
@@ -257,45 +250,101 @@ def demand(spec: StripSpec, browser=None) -> Demand:
                 doc.write_text(html_source, encoding="utf-8")
                 page.goto(doc.as_uri())
                 page.wait_for_function("document.fonts.ready.then(() => true)")
-                return page.evaluate(
-                    _MEASURE_JS,
-                    {
-                        "gap": layout.ROW_GROUP_GAP_TIGHT,
-                        "track": f"{layout.TRACK_EXPOSURE_TIGHT}em",
-                    },
-                )
+                return page.evaluate(script, arg)
         finally:
             page.close()
 
     if browser is not None:
-        return Demand(*probe(browser))
+        return run(browser)
     with sync_playwright() as pw:
         owned = pw.chromium.launch()
         try:
-            return Demand(*probe(owned))
+            return run(owned)
         finally:
             owned.close()
 
 
-def fit(spec: StripSpec, browser=None) -> StripSpec:
-    """Widen the canvas only as far as this photo's own text demands.
+def demand(spec: StripSpec, browser=None) -> Demand:
+    """Measure what this strip's content requires, in design pixels.
 
-    A long body name next to a long lens name overruns the row. The design's
-    answer is never to wrap, truncate or abbreviate, but to give ground in two
-    steps: tighten first, which costs no type size at all, and only widen the
-    canvas -- shrinking the whole block -- if tightening was not enough.
+    Both figures come from one pass over a canvas that starts at its
+    ratio-derived width, so the result depends only on this photo's content,
+    never on what was rendered before it.
     """
-    need = demand(spec, browser)
+    return Demand(
+        *_evaluate(
+            build_html(replace(spec, tight=False)),
+            spec.canvas_width,
+            _MEASURE_JS,
+            {"gap": layout.ROW_GROUP_GAP_TIGHT, "track": f"{layout.TRACK_EXPOSURE_TIGHT}em"},
+            browser,
+        )
+    )
+
+
+class Room(NamedTuple):
+    """What the date and location line needs, against what is left for it."""
+
+    available: float
+    needed: float
+
+
+def caption_room(spec: StripSpec, browser=None) -> Room:
+    """Measure the date and location line against the space beside the signature."""
+    return Room(*_evaluate(build_html(spec), spec.canvas_width, _CAPTION_JS, browser=browser))
+
+
+def fit(spec: StripSpec, browser=None) -> StripSpec:
+    """Settle the canvas on the gear, then hold the caption to what is left.
+
+    There are two stages of ground to give, in order: tighten, which costs no
+    type size at all, and widen the canvas, which shrinks the whole block.
+
+    Gear names may reach for both. They are facts the card is obliged to print
+    in full, their length is bounded, and a card that shrinks to fit one has an
+    answer -- a gear table entry, which the run names.
+
+    The caption may reach only for the first. It is prose the user typed, so it
+    is unbounded, and letting it widen the canvas would let one line of prose
+    decide the type size of a card that then sits in an album next to others
+    set larger, with nothing to say why. When it will not fit, the photo fails
+    and the run says by how much: the caption is the one thing on the card its
+    author can shorten, which is what makes an error the right answer here and
+    the wrong one for a lens name.
+    """
+    gear_only = replace(spec, data=replace(spec.data, location=""))
+    need = demand(gear_only, browser)
 
     if need.loose <= need.available:
-        return replace(spec, tight=False)
-    if need.tight <= need.available:
-        return replace(spec, tight=True)
+        settled = replace(spec, tight=False)
+    elif need.tight <= need.available:
+        settled = replace(spec, tight=True)
+    else:
+        # Grow by exactly the shortfall, which scales the whole block down
+        # rather than singling out any one element. Uncapped on purpose:
+        # stopping at a fixed width would only put the overrun back on top of
+        # the signature at that width. layout.CANVAS_WARN is where the run says
+        # so instead.
+        settled = replace(
+            spec, tight=True, canvas_width=spec.canvas_width + (need.tight - need.available)
+        )
 
-    # Still overruns: grow the canvas by exactly the shortfall, which scales
-    # the whole block down rather than singling out any one element.
-    return replace(
-        spec, tight=True, canvas_width=spec.canvas_width + (need.tight - need.available)
+    if not spec.data.location:
+        return settled
+
+    room = caption_room(settled, browser)
+    if room.needed <= room.available:
+        return settled
+    if not settled.tight:
+        tightened = replace(settled, tight=True)
+        room = caption_room(tightened, browser)
+        if room.needed <= room.available:
+            return tightened
+
+    raise ValueError(
+        f"the location does not fit: it needs {room.needed:.0f} design px of the "
+        f"{room.available:.0f} left beside the signature (canvas {settled.canvas_width:.0f}); "
+        f"shorten it in locations.toml"
     )
 
 
@@ -325,6 +374,22 @@ _MEASURE_JS = """(tight) => {
   for (const row of rows) row.style.gap = '';
   if (previousTrack !== null) exposure.style.letterSpacing = previousTrack;
   return [available, loose, tightened];
+}"""
+
+
+# What is left for the caption after the signature has taken its place. The
+# lens name shares the same box but was already accounted for when the canvas
+# was settled, so this asks only what the date and location line needs.
+_CAPTION_JS = """() => {
+  const row2 = document.getElementById('row2');
+  const timeline = document.getElementById('timeline');
+  const signature = row2.querySelector('img');
+  const gap = parseFloat(getComputedStyle(row2).columnGap || 0);
+  const taken = signature ? signature.getBoundingClientRect().width + gap : 0;
+  const needed = timeline
+    ? Math.max(timeline.getBoundingClientRect().width, timeline.scrollWidth)
+    : 0;
+  return [row2.clientWidth - taken, needed];
 }"""
 
 

@@ -94,6 +94,16 @@ uv run exifcard locations ./kyoto/     # append every photo to a locations.toml
 
 Empty means no location, which is a designed state: the date line simply stands alone. Re-running only appends new files; your captions, comments and ordering are never touched.
 
+A caption has a width budget, because the card's type size is settled by the photo's proportions and the gear names — a caption is never allowed to shrink the rest of the card to make room for itself. What is left for the date and location line:
+
+| card | the whole line | after the `YYYY.MM.DD · ` prefix |
+|---|---|---|
+| 3:2 landscape, with a signature | 592 | 510 |
+| 3:2 landscape, no signature | 720 | 638 |
+| 9:16 portrait, with a signature | 282 | 200 |
+
+Design pixels, not output pixels — the numbers hold at any card size. It is a width and not a character count, because there is no stable character count: `Fushimi Inari, Kyoto` takes 208 of the tightest column's 282, leaving room for one more short word, while the same twenty characters of Chinese or Japanese would not fit at all. A caption that overruns fails that photo and says by how much, so the run tells you which line to shorten rather than printing it across the signature.
+
 ### Configuration
 
 ```sh

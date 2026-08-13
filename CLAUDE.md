@@ -55,6 +55,9 @@ Settled decisions from a specification that is not in this repository, so they c
 - **Strip height is fixed in design units**, independent of how much metadata a photo carries — an album has to stack evenly. This is why `ROW1_HEIGHT`, `ROW2_HEIGHT` and `LINE_HEIGHT` are stated outright instead of left to font metrics.
 - **Type size is compensated for portrait; layout is not.** Crowding comes from a card being narrow, not from its orientation, so there is no separate portrait layout. Landscape must stay pixel-identical — `tests/test_canvas.py` asserts it.
 - **Long names never wrap, truncate or abbreviate.** `strip.fit` tightens first, then widens the canvas. It must stay bidirectional: a one-way ratchet would leave a card shrunken because the previous photo in the batch had a long lens name.
+- **That protection does not extend to the location caption.** Names are facts the card must print in full; the caption is prose the user typed, and it is held to a width budget instead.
+- **The canvas is settled by the photo's proportions and the gear names alone.** A caption may tighten but never widen — otherwise one line of prose would set this card's type smaller than the rest of the album's, silently. A caption that will not fit fails the photo, reporting geometry rather than a character count.
+- **Widening is uncapped.** A ceiling would only put the overrun back on top of the signature at the ceiling's width. `layout.CANVAS_WARN` is where the run says so instead, pointing at the gear table entry that would fix it; a gear name must never fail a photo.
 - **Missing values are omitted, never replaced.** No `Unknown`, no dash, no `N/A`, and the layout does not collapse to fill the gap.
 - Gear tables map an internal code onto the product's real name. They are an override list, never an allow list, and **never a place to shorten anything** — length is `strip.fit`'s problem.
 - Any aspect ratio is accepted and the photo is never cropped.
