@@ -29,6 +29,10 @@ class Config:
     paper: str = "warm"
     out: str = "outputs"
     gear: GearTables = field(default_factory=GearTables)
+    # Extra fonts, tried in this order for characters the bundled ones cannot
+    # draw. Order is the user's to decide: the same code points serve Chinese
+    # and Japanese, so nothing here guesses a language from the text.
+    fonts: tuple[Path, ...] = ()
 
     @classmethod
     def load(cls, path: Path | None = None) -> "Config":
@@ -50,6 +54,7 @@ class Config:
                 lens=dict(gear.get("lens", {})),
                 lens_brand=dict(gear.get("lens_brand", {})),
             ),
+            fonts=tuple(Path(f).expanduser() for f in raw.get("fonts", [])),
         )
 
 
@@ -68,6 +73,15 @@ signature_width = 108        # baseline px, 70-180
 frame = "bleed"              # bleed for screen, equal for print
 paper = "warm"               # warm or white
 out = "outputs"              # default output root, relative to where you run the command
+
+# Fonts for characters the bundled ones cannot draw -- Chinese, Japanese and
+# Korean place names. Nothing is bundled for these: the files are large, most
+# users never need them, and which one is right depends on where you photograph.
+# Point at any you already have, or install a Noto CJK build.
+# Order matters and is yours: it is tried left to right, character by character.
+# Chinese and Japanese are written with the same code points, so exifcard never
+# guesses a language from the text -- put the one you want to win first.
+# fonts = ["~/Library/Fonts/NotoSansTC-Regular.otf", "~/Library/Fonts/NotoSansJP-Regular.otf"]
 
 # Display names. Keys are the raw EXIF strings; anything not listed is shown
 # exactly as the camera wrote it.

@@ -189,6 +189,14 @@ def render_cards(
         if not signature_path.exists():
             raise typer.BadParameter(f"signature not found: {signature_path}")
 
+    # Resolved once, before the batch, so that every card in a run is set from
+    # the same files in the same order rather than from whatever the directory
+    # happened to hold when each photo reached it.
+    fonts = tuple(path.expanduser().resolve() for path in cfg.fonts)
+    for path in fonts:
+        if not path.exists():
+            raise typer.BadParameter(f"font not found: {path}")
+
     photos: list[Path] = []
     roots: dict[Path, Path] = {}
     for path in paths:
@@ -223,6 +231,7 @@ def render_cards(
         signature=signature_path,
         signature_width=cfg.signature_width or layout.SIGNATURE_WIDTH,
         gear=cfg.gear,
+        fonts=fonts,
     )
 
     if dry_run:

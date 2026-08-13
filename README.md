@@ -96,13 +96,25 @@ Empty means no location, which is a designed state: the date line simply stands 
 
 A caption has a width budget, because the card's type size is settled by the photo's proportions and the gear names — a caption is never allowed to shrink the rest of the card to make room for itself. What is left for the date and location line:
 
-| card | the whole line | after the `YYYY.MM.DD · ` prefix |
-|---|---|---|
-| 3:2 landscape, with a signature | 592 | 510 |
-| 3:2 landscape, no signature | 720 | 638 |
-| 9:16 portrait, with a signature | 282 | 200 |
+| card | the whole line | after the `YYYY.MM.DD · ` prefix | Han characters |
+|---|---|---|---|
+| 3:2 landscape, with a signature | 592 | 510 | 59 |
+| 3:2 landscape, no signature | 720 | 638 | 73 |
+| 9:16 portrait, with a signature | 282 | 200 | 23 |
 
-Design pixels, not output pixels — the numbers hold at any card size. It is a width and not a character count, because there is no stable character count: `Fushimi Inari, Kyoto` takes 208 of the tightest column's 282, leaving room for one more short word, while the same twenty characters of Chinese or Japanese would not fit at all. A caption that overruns fails that photo and says by how much, so the run tells you which line to shorten rather than printing it across the signature.
+Design pixels, not output pixels — the numbers hold at any card size. It is a width rather than a character count, because Latin has no stable one: `Fushimi Inari, Kyoto` takes 208 of the tightest column's 282, leaving room for one more short word, where twenty `i`s would leave room for forty. Han does have one, in the last column, because every CJK face is drawn on an em square. A caption that overruns fails that photo and says by how much, so the run tells you which line to shorten rather than printing it across the signature.
+
+### Chinese, Japanese and Korean
+
+Nothing CJK is bundled: those fonts run from 9 to 17MB, most users never need one, and which one is right depends on where you photograph. Register the fonts you want in the config instead — any file on your machine:
+
+```toml
+fonts = ["~/Library/Fonts/NotoSansTC-Regular.otf", "~/Library/Fonts/NotoSansJP-Regular.otf"]
+```
+
+They are tried in the order you list them, character by character, after the bundled faces — so the gear names and the readout keep the design's own typography, and only what those cannot draw falls through. exifcard never picks a font by language: `京都` is the same two code points in Chinese and Japanese, so which of the two forms is right is yours to decide by ordering the list. When one caption ends up drawn from more than one file, the run says which characters came from which, since letterforms then differ within a line.
+
+Han is set at 88% of the date's size, which is where its ink and the digits' reach the same height. Without that a place name overpowers the date beside it — the wrong way round for the quietest line on the card.
 
 ### Configuration
 
