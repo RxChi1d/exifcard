@@ -28,9 +28,12 @@ def test_focal_length_is_a_whole_number(value, expected):
         (200.0, 200, "200mm"),
         # Older DSLRs omit the tag, so the physical value stands.
         (33.0, None, "33mm"),
-        # Some bodies write 0 instead of omitting it, which means the same.
+        # Some bodies write 0 instead of omitting it, which says the same.
         (33.0, 0, "33mm"),
+        # Neither value: the reading is left out rather than printed as 0mm.
         (None, None, ""),
+        (0, 0, ""),
+        (0, None, ""),
     ],
 )
 def test_focal_length_prefers_the_35mm_equivalent(physical, equivalent, expected):

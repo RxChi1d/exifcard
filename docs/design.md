@@ -104,7 +104,11 @@ This is also why the display-name tables are not for shortening. They turn an in
 
 ## Focal length
 
-The card prints the 35mm-equivalent focal length when the camera records one, and the physical value when it does not.
+The focal length on the card is the **35mm equivalent**, not the physical length engraved on the lens. Three steps, in order:
+
+1. `FocalLengthIn35mmFilm` if the camera recorded one.
+2. `FocalLength` — the physical value — if it did not.
+3. Nothing at all if neither is present. Zero counts as absent at both steps: some bodies write it rather than leaving the tag out, which says the same thing, and no lens is 0mm.
 
 The physical number is what the lens barrel says, which argues for showing it, but it cannot record what was actually framed. Measured on one iPhone 16 Pro:
 
