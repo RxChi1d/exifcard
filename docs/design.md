@@ -122,6 +122,14 @@ Two different framings, one number. The sensor crop is what changed, and only th
 
 Older DSLRs — a Canon EOS 700D, a Nikon D90 — omit the tag entirely, so those cards keep the physical value. That leaves two bases in use across a collection without the card saying which, and the alternative was rejected: marking the equivalent ones would put a symbol on modern bodies and not on old ones, drawing attention to a distinction most readers do not care about. The fallback is also what the card always showed, so no photo reads worse than it did before.
 
+## The signature
+
+The signature is bounded on both axes: it may be as wide as `signature_width` and as tall as the row it sits in, whichever binds first. Any transparent margin is cropped off before it is drawn.
+
+Sizing it by width alone left its height to the file's proportions. Row 2 is 35 design units tall with bottom-aligned contents, so a signature squarer than 108/35 — about 3:1 — rendered taller than its row and grew upward through the row gap into the exposure readout. The strip's height is fixed, so nothing gave way; the two simply overlapped. A 2:1 signature came out 52.6 units tall against a 35-unit row and was drawn across the ISO reading.
+
+Cropping matters for the same reason. The margin is what gets sized, so ink filling 56% of a padded file's height rendered at 56% of the size asked for, floating above the baseline rather than sitting on it. That the file should be cut tight to the ink used to be a requirement stated in a config comment and enforced nowhere.
+
 ## Bundled assets
 
 Fonts and brand marks ship inside the package, so a card renders identically on any machine and the tool works offline. All are freely licensed: fonts under the SIL Open Font License, brand marks in the public domain as `PD-textlogo`, with each mark's source recorded in `logos.toml`.
