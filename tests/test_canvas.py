@@ -77,6 +77,58 @@ def fitted(data, browser, ratio=(3, 2), **kwargs):
     return strip.fit(spec, browser=browser)
 
 
+def demanded(data, browser, ratio=(3, 2), **kwargs):
+    spec = strip.StripSpec(
+        data=data,
+        card_width=1000,
+        canvas_width=layout.canvas_width_for(*ratio),
+        logo=logos.find("FUJIFILM", "X-T5"),
+        signature=GOLDEN / "ink-mark.png",
+        **kwargs,
+    )
+    return strip.demand(spec, browser=browser)
+
+
+# The three tests below assert the measurement rather than the appearance.
+# This defect survived because every existing check asked whether the card
+# looked right, and a card whose caption is painted over its signature looks
+# right everywhere except the one place nothing was looking.
+
+
+def test_content_that_fits_is_measured_as_fitting(sample, browser):
+    need = demanded(sample, browser)
+    assert need.loose < need.available
+
+
+def test_a_caption_wider_than_its_box_is_measured_at_its_full_width(sample, browser):
+    """#row2left is compressible, so a long caption stops the box, not the text.
+
+    Summing border boxes therefore returned the clamp itself and reported a
+    comfortable fit while the caption painted across the signature.
+    """
+    long_caption = CardData(**{**sample.__dict__, "location": "A" * 40})
+
+    modest = demanded(sample, browser, ratio=(9, 16))
+    excessive = demanded(long_caption, browser, ratio=(9, 16))
+
+    assert excessive.loose > modest.loose
+    assert excessive.tight > excessive.available
+
+
+def test_a_lens_name_wider_than_its_box_is_measured_at_its_full_width(sample, browser):
+    """The same clamp, reached by the row's other line.
+
+    With no caption to share the row, the old measurement returned exactly the
+    available width -- the arithmetic signature of a clamped box, and the
+    reason the second stage of the adaptation had never run for this row.
+    """
+    long_lens = CardData(**{**sample.__dict__, "lens": "L" * 91, "location": ""})
+
+    need = demanded(long_lens, browser)
+
+    assert need.tight > need.available
+
+
 def test_landscape_with_short_names_is_left_alone(sample, browser):
     result = fitted(sample, browser)
     assert result.canvas_width == layout.CANVAS_MAX

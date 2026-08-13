@@ -19,6 +19,7 @@ from dataclasses import dataclass, replace
 from functools import cache
 from io import BytesIO
 from pathlib import Path
+from typing import NamedTuple
 
 from PIL import Image
 
@@ -227,22 +228,24 @@ html,body{{background:{paper}}}
 </body></html>"""
 
 
-def fit(spec: StripSpec, browser=None) -> StripSpec:
-    """Widen the canvas only as far as this photo's own text demands.
+class Demand(NamedTuple):
+    """What a strip's rows require, against what its canvas offers them."""
 
-    A long body name next to a long lens name overruns the row. The design's
-    answer is never to wrap, truncate or abbreviate, but to give ground in two
-    steps: tighten first, which costs no type size at all, and only widen the
-    canvas -- shrinking the whole block -- if tightening was not enough.
+    available: float
+    loose: float
+    tight: float
 
-    Both measurements are taken in one pass from a canvas that starts at its
+
+def demand(spec: StripSpec, browser=None) -> Demand:
+    """Measure what this strip's content requires, in design pixels.
+
+    Both figures come from one pass over a canvas that starts at its
     ratio-derived width, so the result depends only on this photo's content,
     never on what was rendered before it.
     """
     from playwright.sync_api import sync_playwright
 
-    loose = replace(spec, tight=False)
-    html_source = build_html(loose)
+    html_source = build_html(replace(spec, tight=False))
 
     def probe(page_browser) -> tuple[float, float, float]:
         page = page_browser.new_page(
@@ -265,32 +268,50 @@ def fit(spec: StripSpec, browser=None) -> StripSpec:
             page.close()
 
     if browser is not None:
-        available, needed_loose, needed_tight = probe(browser)
-    else:
-        with sync_playwright() as pw:
-            owned = pw.chromium.launch()
-            try:
-                available, needed_loose, needed_tight = probe(owned)
-            finally:
-                owned.close()
+        return Demand(*probe(browser))
+    with sync_playwright() as pw:
+        owned = pw.chromium.launch()
+        try:
+            return Demand(*probe(owned))
+        finally:
+            owned.close()
 
-    if needed_loose <= available:
-        return loose
-    if needed_tight <= available:
+
+def fit(spec: StripSpec, browser=None) -> StripSpec:
+    """Widen the canvas only as far as this photo's own text demands.
+
+    A long body name next to a long lens name overruns the row. The design's
+    answer is never to wrap, truncate or abbreviate, but to give ground in two
+    steps: tighten first, which costs no type size at all, and only widen the
+    canvas -- shrinking the whole block -- if tightening was not enough.
+    """
+    need = demand(spec, browser)
+
+    if need.loose <= need.available:
+        return replace(spec, tight=False)
+    if need.tight <= need.available:
         return replace(spec, tight=True)
 
     # Still overruns: grow the canvas by exactly the shortfall, which scales
     # the whole block down rather than singling out any one element.
     return replace(
-        spec, tight=True, canvas_width=spec.canvas_width + (needed_tight - available)
+        spec, tight=True, canvas_width=spec.canvas_width + (need.tight - need.available)
     )
 
 
+# A child's border box is not what it needs, it is what it was given.
+# #row2left carries min-width:0 so that it can be compressed, and its children
+# are nowrap, so once the row runs out of space the box stops at the edge and
+# the text simply paints past it -- over the signature. Summing border boxes
+# therefore cannot return a figure larger than the space available, which is
+# why the second stage of the adaptation had never once run for that row.
+# scrollWidth reports what the content needs regardless of the clamp.
 _MEASURE_JS = """(tight) => {
   const info = document.getElementById('info');
   const rows = ['row1', 'row2'].map((id) => document.getElementById(id));
+  const needs = (child) => Math.max(child.getBoundingClientRect().width, child.scrollWidth);
   const widthOf = (row) =>
-    Array.from(row.children).reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) +
+    Array.from(row.children).reduce((sum, child) => sum + needs(child), 0) +
     parseFloat(getComputedStyle(row).columnGap || 0) * Math.max(0, row.children.length - 1);
   const available = rows[0].clientWidth;
   const loose = Math.max(...rows.map(widthOf));
