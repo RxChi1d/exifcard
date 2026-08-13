@@ -63,6 +63,30 @@ def test_one_bad_file_does_not_cost_the_rest_of_the_batch(tmp_path):
     assert "broken.jpg" in result.output
 
 
+def test_a_caption_too_long_to_fit_fails_only_its_own_photo(tmp_path):
+    """The caption is held to the space the gear leaves it, and a photo whose
+    caption overruns is reported rather than rendered with the text painted
+    across the signature."""
+    album = tmp_path / "album"
+    photo(album / "fits.JPG")
+    photo(album / "overruns.JPG")
+    out = tmp_path / "out"
+
+    captions = out / "album" / "locations.toml"
+    captions.parent.mkdir(parents=True, exist_ok=True)
+    captions.write_text(
+        '"fits.JPG" = "Kyoto"\n"overruns.JPG" = "' + "A" * 200 + '"\n', encoding="utf-8"
+    )
+
+    result = runner.invoke(app, ["render", str(album), "--out", str(out), "--force"])
+
+    assert (out / "album" / "fits.jpg").exists()
+    assert not (out / "album" / "overruns.jpg").exists()
+    assert result.exit_code == 1
+    assert "overruns.JPG" in result.output
+    assert "locations.toml" in result.output
+
+
 def test_a_clean_run_exits_zero(tmp_path):
     album = tmp_path / "album"
     photo(album / "good.JPG")

@@ -127,6 +127,16 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
             canvas_width=layout.canvas_width_for(photo.width, photo.height),
         )
         spec = strip.fit(spec, browser=browser)
+        if spec.canvas_width > layout.CANVAS_WARN:
+            # Not a failure: gear names are printed in full whatever it costs.
+            # But the cost is this card's type reading smaller than the rest of
+            # the album's, so the run points at the entry that would fix it.
+            longest = max((data.body, data.lens), key=len)
+            notes.append(
+                f"the strip canvas widened to {spec.canvas_width:.0f} to fit the gear names, "
+                f"so the type reads at {layout.CANVAS_MAX / spec.canvas_width:.0%} of baseline; "
+                f'a shorter gear table entry for "{longest}" would keep it at full size'
+            )
         strip_image = strip.render(spec, browser=browser)
 
         lossless = False

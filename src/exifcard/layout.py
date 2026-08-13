@@ -30,6 +30,13 @@ CANVAS_MAX = 760.0
 CANVAS_MIN = 450.0
 PORTRAIT_REFERENCE = 604.0
 
+# Gear names widen the canvas without limit, because a cap would simply put the
+# overrunning text back on top of the signature at whatever width the cap sat.
+# This is where the card says so instead: past it the type is below 84% of
+# baseline, which is a gear table entry waiting to be written, not a layout
+# failure. A sensor, not a rule -- the card still renders.
+CANVAS_WARN = 900.0
+
 PAPER = {"warm": "#faf8f4", "white": "#ffffff"}
 
 COLOR_BODY = "#26241f"

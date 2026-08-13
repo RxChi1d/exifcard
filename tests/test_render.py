@@ -132,6 +132,22 @@ def test_exif_safe_mode_drops_location(photo, tmp_path):
     assert not Image.open(destination).getexif().get_ifd(0x8825)
 
 
+def test_a_canvas_widened_past_the_warning_says_so(photo, tmp_path):
+    """Gear names are printed in full whatever it costs, so this is a note and
+    not a failure -- but the cost is this card's type reading smaller than the
+    rest of the album's, and nothing else on the card would show it."""
+    wordy = tmp_path / "DSC00002.JPG"
+    exif = Image.open(photo).getexif()
+    exif.get_ifd(0x8769)[0xA434] = "TAMRON " + "W" * 91
+    Image.open(photo).save(wordy, exif=exif)
+
+    outcome = render.render(wordy, tmp_path / "out" / "card.jpg", render.Options())
+
+    widened = [note for note in outcome.notes if "widened" in note]
+    assert widened, outcome.notes
+    assert "of baseline" in widened[0]
+
+
 def test_output_format_follows_the_input(photo, tmp_path):
     assert render.resolve_format(photo, None) == "jpg"
     assert render.resolve_format(tmp_path / "a.heic", None) == "heic"

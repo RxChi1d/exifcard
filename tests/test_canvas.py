@@ -9,6 +9,8 @@ from there.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 from PIL import Image
@@ -165,6 +167,106 @@ def test_fitting_depends_only_on_the_photo_at_hand(sample, browser):
     fitted(long_names, browser, ratio=(9, 16))
     after = fitted(sample, browser, ratio=(9, 16))
     assert after.canvas_width == layout.CANVAS_MIN
+
+
+# The caption is held to whatever the gear leaves it. These assert that
+# boundary from both sides: the caption may not move the canvas, and the gear
+# may move it as far as it likes.
+
+SIGNED = {"signature": GOLDEN / "ink-mark.png"}
+
+
+def captioned(sample, text):
+    return CardData(**{**sample.__dict__, "location": text})
+
+
+def test_the_canvas_is_settled_by_the_gear_alone(sample, browser):
+    """The gatekeeper for the whole policy.
+
+    A caption is prose the user typed, so it has no length limit. If it could
+    widen the canvas, one long line would set this card's type smaller than
+    every other card in the album, with nothing on the card to say why.
+    """
+    short = fitted(captioned(sample, "Kyoto"), browser, **SIGNED)
+    long = fitted(captioned(sample, "A" * 75), browser, **SIGNED)
+
+    assert long.canvas_width == short.canvas_width == layout.CANVAS_MAX
+
+
+def test_a_caption_that_will_not_fit_fails_the_photo(sample, browser):
+    """The alternative to widening. The caption is the one thing on the card
+    its author can shorten, which is what makes an error the right answer."""
+    with pytest.raises(ValueError) as raised:
+        fitted(captioned(sample, "A" * 200), browser, **SIGNED)
+
+    # Geometry, not a character count: 80 dotted i's and 80 ideographs are not
+    # the same width, and the date shares the line with them.
+    message = str(raised.value)
+    assert "design px" in message
+    assert "locations.toml" in message
+
+
+def test_tightening_leaves_the_caption_more_room(sample, browser):
+    spec = strip.StripSpec(
+        data=captioned(sample, "Kyoto"),
+        card_width=1000,
+        canvas_width=layout.CANVAS_MAX,
+        **SIGNED,
+    )
+
+    loose = strip.caption_room(replace(spec, tight=False), browser=browser)
+    tightened = strip.caption_room(replace(spec, tight=True), browser=browser)
+
+    assert tightened.available > loose.available
+
+
+def test_a_caption_may_use_the_first_stage_of_the_adaptation(sample, browser):
+    """Tightening costs no type size at all, so the caption is welcome to it.
+
+    The first stage frees only the column gap, so the band of captions that
+    fits tightened but not loose is a character or two wide and sits at a
+    different length on every platform's metrics. Hence the search rather than
+    a fixture that would be calibrated to this machine.
+    """
+    spec = strip.StripSpec(
+        data=sample, card_width=1000, canvas_width=layout.CANVAS_MAX, **SIGNED
+    )
+    for length in range(1, 200):
+        candidate = replace(spec, data=captioned(sample, "A" * length))
+        loose = strip.caption_room(replace(candidate, tight=False), browser=browser)
+        if loose.needed <= loose.available:
+            continue
+        tightened = strip.caption_room(replace(candidate, tight=True), browser=browser)
+        if tightened.needed <= tightened.available:
+            break
+    else:
+        pytest.skip("no caption length falls between the loose and tightened budgets here")
+
+    result = strip.fit(candidate, browser=browser)
+
+    assert result.tight is True
+    assert result.canvas_width == layout.CANVAS_MAX
+
+
+def test_gear_widens_the_canvas_without_a_ceiling(sample, browser):
+    """A ceiling would only put the overrun back on top of the signature at
+    whatever width the ceiling sat."""
+    long_lens = CardData(**{**sample.__dict__, "lens": "W" * 91, "location": ""})
+
+    result = fitted(long_lens, browser, ratio=(9, 16))
+
+    assert result.canvas_width > layout.CANVAS_WARN
+
+
+def test_a_failed_caption_leaves_nothing_behind(sample, browser):
+    """Adaptation runs both ways for captions too, not only for names."""
+    with pytest.raises(ValueError):
+        fitted(captioned(sample, "A" * 200), browser, **SIGNED)
+
+    after = fitted(captioned(sample, "Kyoto"), browser, **SIGNED)
+
+    assert after.canvas_width == layout.CANVAS_MAX
+    assert after.tight is False
 
 
 @pytest.mark.golden
