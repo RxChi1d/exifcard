@@ -12,9 +12,12 @@ specifies, rather than reimplemented approximately in a drawing library.
 
 from __future__ import annotations
 
+import base64
 import html
 import tempfile
 from dataclasses import dataclass, replace
+from functools import cache
+from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
@@ -58,6 +61,36 @@ def _file_url(path: Path) -> str:
     falls back to.
     """
     return path.resolve().as_uri()
+
+
+def signature_source(path: Path) -> str:
+    """The signature, cropped to its ink, as a data URI.
+
+    The design assumes a file cropped tight to the ink and nothing enforced it.
+    A file with transparent margin renders its ink smaller than asked for and
+    floating above the baseline, because the margin is what gets sized and the
+    ink only fills part of it. Cropping here makes the assumption hold for any
+    file instead of being a requirement buried in a config comment.
+
+    Inlining rather than writing a temporary file avoids a second path whose
+    lifetime would have to outlive every page in the batch.
+    """
+    stat = path.stat()
+    return _signature_data_uri(path, stat.st_mtime_ns, stat.st_size)
+
+
+@cache
+def _signature_data_uri(path: Path, mtime: int, size: int) -> str:
+    with Image.open(path) as opened:
+        mark = opened.convert("RGBA")
+    # Scanned ink trails off into alpha values of 1 or 2, which would defeat a
+    # bare getbbox() and leave the margin in place.
+    box = mark.getchannel("A").point(lambda level: 255 if level > 8 else 0).getbbox()
+    if box:
+        mark = mark.crop(box)
+    buffer = BytesIO()
+    mark.save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 def _font_faces() -> str:
@@ -154,9 +187,16 @@ def build_html(spec: StripSpec) -> str:
         else ""
     )
 
+    # The signature is bounded on both axes. Width alone left the height to the
+    # file's proportions, and a signature squarer than SIGNATURE_WIDTH/ROW2_HEIGHT
+    # rendered taller than its row -- which, bottom-aligned in a row of fixed
+    # height, grows upward through the row gap and collides with the exposure
+    # readout. Constraining both makes the mark shrink to fit instead, keeping
+    # its aspect ratio, whatever proportions the file has.
     signature = (
-        f'<img src="{_file_url(spec.signature)}" alt="" '
-        f'style="width:{spec.signature_width}px;height:auto;display:block;flex:none;'
+        f'<img src="{signature_source(spec.signature)}" alt="" '
+        f"style=\"max-width:{spec.signature_width}px;max-height:{layout.ROW2_HEIGHT}px;"
+        f"width:auto;height:auto;display:block;flex:none;"
         f'opacity:{layout.SIGNATURE_OPACITY};margin-bottom:{layout.SIGNATURE_BASELINE_NUDGE}px">'
         if spec.signature
         else ""

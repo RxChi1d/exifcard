@@ -57,9 +57,12 @@ EXAMPLE = """\
 # exifcard configuration.
 # Location: ~/.config/exifcard/config.toml (or $XDG_CONFIG_HOME/exifcard/config.toml)
 
-# Path to your signature: a transparent PNG cropped tight to the ink.
-# The file stays where it is; exifcard only reads it.
+# Path to your signature: a PNG on a transparent background. Any margin around
+# the ink is cropped off when the card is drawn, so it does not matter how
+# tightly you cut it. The file stays where it is; exifcard only reads it.
 signature = "~/Pictures/private/signature.png"
+# How wide the mark may be. It is also bounded by the height of the row it sits
+# in, so a signature squarer than about 3:1 comes out narrower than this.
 signature_width = 108        # baseline px, 70-180
 
 frame = "bleed"              # bleed for screen, equal for print
