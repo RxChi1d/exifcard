@@ -173,7 +173,10 @@ def test_a_han_caption_measures_at_its_arithmetic_width(sample, browser):
         spec_for(sample, ratio=(9, 16), signature=GOLDEN / "ink-mark.png", fonts=(HAN,)),
         browser=browser,
     )
-    assert room.needed == pytest.approx(len(sample.location) * per_character, abs=1.0)
+    # Two pixels across twelve characters, because the measurement takes the
+    # larger of a fractional rect and an integer scrollWidth and the two round
+    # differently per platform. A wrong ratio would be out by more than ten.
+    assert room.needed == pytest.approx(len(sample.location) * per_character, abs=2.0)
 
 
 def test_a_han_caption_beyond_the_budget_fails_the_photo(sample, browser):
