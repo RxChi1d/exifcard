@@ -76,9 +76,16 @@ def spread(text: str, fonts: tuple[Path, ...] = ()) -> dict[str, str]:
     the same code points serve Chinese and Japanese, so the order they wrote is
     the only honest answer -- but they can only arrange it if they are told.
 
-    Only the registered fonts are counted. Latin always comes from the bundled
-    faces, so counting those would report every mixed caption ever written and
-    the warning would mean nothing.
+    What this is looking for is one script drawn by more than one font -- Han
+    from two files, say, whose characters were designed to different
+    conventions. It is not "characters the bundled fonts do not cover", even
+    though the two coincide today: Noto Sans has no Han, so skipping what the
+    bundled faces cover happens to leave exactly the CJK behind. Bundle
+    anything with Han in it and that reading would silence this warning for
+    good, with nothing to show it had stopped firing.
+
+    Latin is excluded because it always comes from the bundled faces, so
+    counting it would report every mixed caption ever written.
     """
     bundled = set()
     for _, covered in _bundled():

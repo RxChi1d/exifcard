@@ -98,11 +98,11 @@ A caption has a width budget, because the card's type size is settled by the pho
 
 | card | the whole line | after the `YYYY.MM.DD · ` prefix | Han characters |
 |---|---|---|---|
-| 3:2 landscape, with a signature | 592 | 510 | 59 |
+| 3:2 landscape, with a signature | 592 | 510 | 58 |
 | 3:2 landscape, no signature | 720 | 638 | 73 |
-| 9:16 portrait, with a signature | 282 | 200 | 23 |
+| 9:16 portrait, with a signature | 282 | 200 | 22 |
 
-Design pixels, not output pixels — the numbers hold at any card size. It is a width rather than a character count, because Latin has no stable one: `Fushimi Inari, Kyoto` takes 208 of the tightest column's 282, leaving room for one more short word, where twenty `i`s would leave room for forty. Han does have one, in the last column, because every CJK face is drawn on an em square. A caption that overruns fails that photo and says by how much, so the run tells you which line to shorten rather than printing it across the signature.
+Design pixels, not output pixels — the numbers hold at any card size. It is a width rather than a character count, because Latin has no stable one: `Fushimi Inari, Kyoto` takes 208 of the tightest column's 282, leaving room for one more short word, where twenty `i`s would leave room for forty. Han does have one, in the last column, because every CJK face is drawn on an em square. Those counts are rounded down and one or two short of what will actually pass, on purpose: a number you can write to the end of without thinking is worth more than the last character. A caption that overruns fails that photo and says by how much, so the run tells you which line to shorten rather than printing it across the signature.
 
 ### Chinese, Japanese and Korean
 

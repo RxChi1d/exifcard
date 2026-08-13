@@ -179,6 +179,33 @@ def test_a_han_caption_measures_at_its_arithmetic_width(sample, browser):
     assert room.needed == pytest.approx(len(sample.location) * per_character, abs=2.0)
 
 
+@pytest.mark.parametrize(
+    "characters,ratio,signed",
+    [(58, (3, 2), True), (73, (3, 2), False), (22, (9, 16), True)],
+)
+def test_the_budget_the_readme_prints_is_a_budget_you_can_spend(
+    sample, browser, characters, ratio, signed
+):
+    """The documented counts, held to the card rather than to arithmetic.
+
+    They are one or two short of what passes, which is the point: 59 only fits
+    by spending the tightening reserve, so the exposure readout gives up its
+    tracking to pay for a caption, and 23 lands on exactly 282 of 282 -- a
+    margin thinner than the pixel rounding that differs between platforms. A
+    documented budget that a run then refuses is worse than none.
+    """
+    sample.location = "京" * characters
+    strip.fit(
+        spec_for(
+            sample,
+            ratio=ratio,
+            signature=GOLDEN / "ink-mark.png" if signed else None,
+            fonts=(HAN,),
+        ),
+        browser=browser,
+    )
+
+
 def test_a_han_caption_beyond_the_budget_fails_the_photo(sample, browser):
     sample.location = "京都伏見稲荷大社臺北國永" * 4
     with pytest.raises(ValueError, match="the location does not fit"):
