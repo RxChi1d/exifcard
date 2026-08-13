@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import html
+import re
 import tempfile
 from dataclasses import dataclass, replace
 from functools import cache
@@ -51,6 +52,9 @@ class StripSpec:
     canvas_width: float = layout.CANVAS_MAX
     # Whether the first-stage tightening is applied.
     tight: bool = False
+    # Fonts the user registered, in their order, for what the bundled ones
+    # cannot draw.
+    fonts: tuple[Path, ...] = ()
 
 
 def _file_url(path: Path) -> str:
@@ -94,16 +98,69 @@ def _signature_data_uri(path: Path, mtime: int, size: int) -> str:
     return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
-def _font_faces() -> str:
+def user_family(path: Path) -> str:
+    """The CSS family name a registered font file is declared under."""
+    return "user-" + re.sub(r"[^A-Za-z0-9]+", "-", path.stem).strip("-").lower()
+
+
+def _font_faces(fonts: tuple[Path, ...] = ()) -> str:
+    faces = [(family, FONTS / filename) for family, filename in _FONT_FACES]
+    faces += [(user_family(path), path) for path in fonts]
     return "\n".join(
-        f"@font-face{{font-family:'{family}';src:url('{_file_url(FONTS / filename)}');"
+        f"@font-face{{font-family:'{family}';src:url('{_file_url(path)}');"
         f"font-weight:100 900;font-display:block}}"
-        for family, filename in _FONT_FACES
+        for family, path in faces
     )
 
 
-def _stack(*families: str) -> str:
-    return ",".join(f"'{f}'" for f in families) + ",sans-serif"
+def _stack(*families: str, fonts: tuple[Path, ...] = ()) -> str:
+    """A CSS font stack, with the user's fonts after the design's own.
+
+    Last is the only safe place for them. CSS resolves a stack character by
+    character, so a font that covers Latin as well as Han -- which every CJK
+    font does -- would take over the gear names and the readout from anywhere
+    earlier in the list, restyling the whole card with nothing said about it.
+    """
+    names = list(families) + [user_family(path) for path in fonts]
+    return ",".join(f"'{f}'" for f in names) + ",sans-serif"
+
+
+# Scripts written on an em square, whose ink runs taller than the Latin and
+# monospace faces this card is set in. Halfwidth katakana (FF61-FF9F) is left
+# out on purpose: it is not full-width, so it is not mis-sized to begin with.
+_CJK = re.compile(
+    r"[ᄀ-ᇿ　-〿぀-ヿ㐀-䶿一-鿿"
+    r"가-힣豈-﫿！-｠￠-￦"
+    r"\U00020000-\U0003134A]+"
+)
+
+
+def _typeset(text: str, size: float, track: float) -> str:
+    """Escaped text with its CJK runs set smaller, so the line reads level.
+
+    Per run rather than per element, because a caption is often mixed --
+    `京都 Fushimi Inari` -- and sizing the whole line down would shrink the
+    Latin along with it.
+
+    The tracking is restated even though the run inherits it, because an
+    inherited letter-spacing arrives as the length it already computed to on
+    the parent: .1em on a 9px line inherits as 0.9px and stays 0.9px inside a
+    7.92px run, which is looser against the smaller face and leaves the width
+    per character no longer a multiple of the size. Restating it in em ties
+    both back to the run's own size, so a character advances by exactly
+    size * ratio * (1 + track) and the caption budget stays arithmetic.
+    """
+    out = []
+    position = 0
+    for run in _CJK.finditer(text):
+        out.append(html.escape(text[position : run.start()]))
+        out.append(
+            f'<span style="font-size:{size * layout.CJK_SIZE_RATIO:g}px;'
+            f'letter-spacing:{track}em">{html.escape(run.group())}</span>'
+        )
+        position = run.end()
+    out.append(html.escape(text[position:]))
+    return "".join(out)
 
 
 def build_html(spec: StripSpec) -> str:
@@ -118,8 +175,8 @@ def build_html(spec: StripSpec) -> str:
     exposure_track = layout.TRACK_EXPOSURE_TIGHT if spec.tight else layout.TRACK_EXPOSURE
     mode = layout.FRAMES[spec.frame]
     paper = layout.PAPER[spec.paper]
-    gear_font = _stack(layout.FONT_GEAR, layout.FONT_FALLBACK)
-    mono_font = _stack(layout.FONT_READOUT, layout.FONT_FALLBACK)
+    gear_font = _stack(layout.FONT_GEAR, layout.FONT_FALLBACK, fonts=spec.fonts)
+    mono_font = _stack(layout.FONT_READOUT, layout.FONT_FALLBACK, fonts=spec.fonts)
 
     if spec.logo:
         brand = (
@@ -134,7 +191,8 @@ def build_html(spec: StripSpec) -> str:
             f'<span style="font-family:{gear_font};font-size:{layout.SIZE_BODY}px;'
             f"font-weight:500;letter-spacing:{layout.TRACK_EXPOSURE}em;"
             f"line-height:{layout.LINE_HEIGHT};"
-            f'color:{layout.COLOR_BODY};white-space:nowrap">{html.escape(d.brand_label)}</span>'
+            f'color:{layout.COLOR_BODY};white-space:nowrap">'
+            f"{_typeset(d.brand_label, layout.SIZE_BODY, layout.TRACK_EXPOSURE)}</span>"
         )
     else:
         brand = ""
@@ -183,7 +241,7 @@ def build_html(spec: StripSpec) -> str:
         f'<div id="timeline" style="font-family:{mono_font};font-size:{layout.SIZE_DATE}px;'
         f"letter-spacing:{layout.TRACK_DATE}em;color:{layout.COLOR_DATE};"
         f"line-height:{layout.LINE_HEIGHT};"
-        f'white-space:nowrap">{html.escape(d.timeline)}</div>'
+        f'white-space:nowrap">{_typeset(d.timeline, layout.SIZE_DATE, layout.TRACK_DATE)}</div>'
         if d.timeline
         else ""
     )
@@ -206,7 +264,7 @@ def build_html(spec: StripSpec) -> str:
 
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><style>
-{_font_faces()}
+{_font_faces(spec.fonts)}
 *{{margin:0;padding:0;box-sizing:border-box}}
 html,body{{background:{paper}}}
 #strip{{width:{spec.canvas_width}px;background:{paper};
@@ -236,6 +294,26 @@ class Demand(NamedTuple):
     tight: float
 
 
+def _assert_fonts_loaded(page) -> None:
+    """Fail on a font that was declared but never arrived.
+
+    document.fonts.ready resolves whether or not each face loaded, so a wrong
+    path leaves the promise satisfied, the face in status 'error', and the text
+    quietly set in whatever the system offers -- measured and photographed as
+    if it were the real thing. The cmap check in glyphs.py cannot see this
+    either: it reads the file the user named, not what the browser received.
+    """
+    failed = page.evaluate(
+        "() => Array.from(document.fonts)"
+        ".filter((face) => face.status === 'error').map((face) => face.family)"
+    )
+    if failed:
+        raise RuntimeError(
+            "these fonts are declared but did not load, so the strip would be set in a "
+            f"substitute: {', '.join(sorted(set(failed)))}"
+        )
+
+
 def _evaluate(html_source: str, canvas_width: float, script: str, arg=None, browser=None):
     """Lay the strip out in a page and run one measuring script over it."""
     from playwright.sync_api import sync_playwright
@@ -250,6 +328,7 @@ def _evaluate(html_source: str, canvas_width: float, script: str, arg=None, brow
                 doc.write_text(html_source, encoding="utf-8")
                 page.goto(doc.as_uri())
                 page.wait_for_function("document.fonts.ready.then(() => true)")
+                _assert_fonts_loaded(page)
                 return page.evaluate(script, arg)
         finally:
             page.close()
@@ -411,6 +490,7 @@ def render(spec: StripSpec, browser=None) -> Image.Image:
                 doc.write_text(html_source, encoding="utf-8")
                 page.goto(doc.as_uri())
                 page.wait_for_function("document.fonts.ready.then(() => true)")
+                _assert_fonts_loaded(page)
                 return page.locator("#strip").screenshot(type="png")
         finally:
             page.close()
@@ -467,6 +547,7 @@ def measure(spec: StripSpec, browser=None) -> dict[str, dict[str, float]]:
                 doc.write_text(html_source, encoding="utf-8")
                 page.goto(doc.as_uri())
                 page.wait_for_function("document.fonts.ready.then(() => true)")
+                _assert_fonts_loaded(page)
                 return page.evaluate(script)
         finally:
             page.close()

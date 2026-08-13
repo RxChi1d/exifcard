@@ -26,6 +26,9 @@ class Options:
     signature_width: float = layout.SIGNATURE_WIDTH
     gear: metadata.GearTables | None = None
     location: str = ""
+    # Extra fonts for characters the bundled ones cannot draw, in the order the
+    # user listed them.
+    fonts: tuple[Path, ...] = ()
 
 
 @dataclass
@@ -110,10 +113,20 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
             )
 
         absent = glyphs.missing(
-            data.brand_label, data.body, data.lens_brand, data.lens, data.exposure, data.timeline
+            data.brand_label,
+            data.body,
+            data.lens_brand,
+            data.lens,
+            data.exposure,
+            data.timeline,
+            fonts=options.fonts,
         )
         if absent:
             notes.append(glyphs.describe(absent))
+
+        spread = glyphs.spread(data.location, options.fonts)
+        if spread:
+            notes.append(glyphs.describe_spread(spread))
 
         logo = logos.find(data.make_key, data.body)
         spec = strip.StripSpec(
@@ -125,6 +138,7 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
             signature=options.signature,
             signature_width=options.signature_width,
             canvas_width=layout.canvas_width_for(photo.width, photo.height),
+            fonts=options.fonts,
         )
         spec = strip.fit(spec, browser=browser)
         if spec.canvas_width > layout.CANVAS_WARN:

@@ -164,6 +164,40 @@ Sizing it by width alone left its height to the file's proportions. Row 2 is 35 
 
 Cropping matters for the same reason. The margin is what gets sized, so ink filling 56% of a padded file's height rendered at 56% of the size asked for, floating above the baseline rather than sitting on it. That the file should be cut tight to the ink used to be a requirement stated in a config comment and enforced nowhere.
 
+## CJK captions
+
+No CJK font is bundled. The smallest usable ones are 9-17MB against the 2.8MB the card's own three faces weigh, most users never need one, and a repository is the wrong place to put a binary that large: git history is permanent, fonts do not delta-compress, and every future version would add another full copy. The user registers files they already have instead, in `config.toml`, and they are tried in that order after the bundled faces.
+
+Order is the user's because language detection would be a guess: `京都` is the same two code points in Chinese and in Japanese, and the two traditions draw several characters differently. Nothing here inspects the text to pick a font. What the run does instead is say when one caption was drawn from more than one file, which is the point at which letterforms stop matching within a line.
+
+Registered fonts go **last** in the CSS stack. CSS resolves a stack character by character, and every CJK font also covers Latin, so anywhere earlier would hand it the gear names and the exposure readout and restyle the card with nothing said about it.
+
+### Size compensation
+
+Han ink is taller than the digits it shares a line with, so at one font-size the place name overpowers the date — backwards for the quietest line on the card. Measured from the outlines rather than the declared ascent, since it is ink the eye levels against:
+
+```
+                              ink above baseline    to match the digits
+JetBrains Mono digits                0.741 em        —
+Noto Sans TC                         0.842           0.880
+Noto Sans JP                         0.832           0.891
+Noto Sans KR                         0.832           0.891
+Noto Sans SC                         0.842           0.880
+Noto Sans CJK TC                     0.848           0.874
+```
+
+The ratio that levels them spans 0.874 to 0.891 across sans, serif and rounded designs in four regional variants, so `CJK_SIZE_RATIO` is one constant at 0.88 rather than a table to maintain per font. It has to be font-independent: nothing is bundled, so the value cannot be tuned against any particular file.
+
+Compensation is applied per run of CJK characters rather than to the whole line, because a caption is often mixed — `京都 Fushimi Inari` — and sizing the element down would shrink the Latin with it.
+
+The tracking is restated on each run even though it would be inherited. An inherited `letter-spacing` arrives as the length it already computed to on the parent: `.1em` on a 9px line inherits as 0.9px and stays 0.9px inside a 7.92px run. Restating it in em ties both to the run's own size, which is what keeps a character's advance at exactly `size × 0.88 × 1.1` and the caption budget arithmetic rather than measured.
+
+Row 2 keeps its height. Its 35 design px leave the date line 11.0 once the lens line and the gap have taken theirs; the line box is 10.8 uncompensated and 9.5 compensated, and an inline child smaller than its line does not grow it. That 0.2px of headroom is asserted in `tests/test_cjk.py`, because overflow there would push up into row 1 rather than down into the paper.
+
+### Fonts that fail to load
+
+A declared face whose file is missing does not stop `document.fonts.ready` from resolving. The page then lays out in whatever the system offers, is measured as though that were the design, and is photographed the same way. The cmap check cannot catch it either: it reads the file the user named, not what the browser received. Every page therefore checks `FontFace.status` before measuring or shooting, and raises rather than producing a card.
+
 ## Bundled assets
 
 Fonts and brand marks ship inside the package, so a card renders identically on any machine and the tool works offline. All are freely licensed: fonts under the SIL Open Font License, brand marks in the public domain as `PD-textlogo`, with each mark's source recorded in `logos.toml`.

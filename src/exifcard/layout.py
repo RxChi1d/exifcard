@@ -108,6 +108,14 @@ TRACK_LENS_BRAND = 0.1
 SIZE_DATE = 9.0
 TRACK_DATE = 0.1
 
+# Han ink reaches 0.84em above the baseline where this row's monospace digits
+# reach 0.74, so at one font-size a place name reads 13% taller than the date
+# beside it -- the wrong way round for the quietest line on the card. Measured
+# across ten faces (sans, serif and rounded, in TC, JP, KR and SC) the ratio
+# that levels them spans 0.869 to 0.891, which is why this is one constant and
+# not a per-font table: no font the user registers can fall far from it.
+CJK_SIZE_RATIO = 0.88
+
 SIGNATURE_WIDTH = 108.0
 SIGNATURE_WIDTH_RANGE = (70.0, 180.0)
 SIGNATURE_OPACITY = 0.7
