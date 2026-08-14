@@ -122,7 +122,7 @@ def _family_name(path: Path) -> str:
 
 # Typst lays out in points and rasterizes at a requested ppi. At 72 ppi one
 # point is one pixel, so a design unit maps onto a point and the scale factor
-# rides entirely on the ppi, exactly as device_scale_factor does for Chromium.
+# rides entirely on the ppi. Nothing in the design is ever pre-multiplied.
 POINTS_PER_DESIGN_UNIT = 1.0
 BASE_PPI = 72.0
 
@@ -816,10 +816,11 @@ def _emit(spec: StripSpec, key: str, text: str, font: str, size: float, track: f
 
 @cache
 def _vertical_metrics(path: Path) -> tuple[float, float]:
-    """The font's ascent and descent in em, from the metrics the browser uses.
+    """The font's ascent and descent in em.
 
     All three bundled faces set USE_TYPO_METRICS, which is the flag that tells
-    a layout engine to prefer the OS/2 typographic pair over the hhea one.
+    a layout engine to prefer the OS/2 typographic pair over the hhea one, so
+    that is the pair read here.
     """
     from fontTools.ttLib import TTFont
 

@@ -25,12 +25,9 @@
 ```sh
 git clone https://github.com/RxChi1d/exifcard && cd exifcard
 uv sync
-uv run exifcard install-browser
 ```
 
 `uv sync` 會安裝 `uv.lock` 裡鎖定的確切相依版本，也就是這個工具實際被測試過的那一組。這件事在這裡比一般專案更要緊：HEIC 編碼、JPEG 量化表直傳、無損合成，全都建立在相依套件**沒有寫進文件**的行為上，所以版本漂移可能直接讓某個格式壞掉，而不只是讓某個數字改變。
-
-`install-browser` 會下載用來渲染資訊列的 Chromium——見〈[運作方式](#運作方式)〉。在 Linux 上請加 `--with-deps`，它會一併安裝 Chromium 啟動所需的系統函式庫。
 
 若要使用 `--lossless`，需另外安裝 `jpegtran`（macOS 用 `brew install jpeg-turbo`，Debian/Ubuntu 用 `apt install libjpeg-turbo-progs`）。
 
@@ -40,7 +37,6 @@ uv run exifcard install-browser
 
 ```sh
 uv tool install git+https://github.com/RxChi1d/exifcard
-exifcard install-browser
 ```
 
 代價是 tool 安裝會**重新解析**相依，而不是讀取 `uv.lock`：你拿到的是安裝當天符合版本範圍的那一組，而不是測試實際跑過的那一組。
@@ -165,7 +161,7 @@ EXIF 沒有提供的一律省略——手動鏡不回報光圈，曝光讀數就
 照片與資訊列從不重疊，所以兩者分開製作再合併：
 
 ```
-Chromium 只渲染資訊列                  Pillow 組裝卡片
+Typst 只排資訊列                       Pillow 組裝卡片
 ┌──────────────────┐                   ┌──────────────────┐
 │                  │                   │  照片位元組       │
 │   （沒有照片）     │                   │  原封不動         │
@@ -174,7 +170,7 @@ Chromium 只渲染資訊列                  Pillow 組裝卡片
 └──────────────────┘                   └──────────────────┘
 ```
 
-瀏覽器存在的理由是文字——字距、字偶間距與兩端對齊，全部精確等於設計稿的數值。而因為它只看得到資訊列，照片永遠不會被重新取樣、不會被色彩空間轉換，也不會受限於瀏覽器的表面尺寸上限。字級會依直幅比例做補償，所以一張高的卡片不等於一張字很小的卡片。
+排版引擎存在的理由是文字——字距，以及字體自己的字偶間距，全部精確等於設計稿的數值。每個元素的位置先以設計單位算好，引擎只負責排字與光柵化。而因為它只看得到資訊列，照片永遠不會被重新取樣、也不會被色彩空間轉換。字級會依直幅比例做補償，所以一張高的卡片不等於一張字很小的卡片。
 
 字體與品牌標誌隨套件一起打包，所以卡片在任何機器上都渲染出相同結果，且工具可離線運作。
 
