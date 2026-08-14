@@ -33,6 +33,7 @@ import json
 import re
 import tempfile
 from functools import cache
+from io import BytesIO
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import NamedTuple
@@ -391,16 +392,41 @@ def _logo_width(spec: StripSpec) -> float:
     return layout.LOGO_HEIGHT * _svg_aspect(spec.logo)
 
 
+def prepared_signature(path: Path) -> tuple[bytes, int, int]:
+    """The signature cropped to its ink and faded, with the ink's own size.
+
+    One mark serves a whole batch, and preparing it costs a decode, a crop and
+    an alpha pass -- so it is done once per file rather than once per card, and
+    per card it was being done four times over: the two fit measurements, the
+    geometry, and the render.
+    """
+    stat = path.stat()
+    return _prepared_signature(path, stat.st_mtime_ns, stat.st_size)
+
+
+@cache
+def _prepared_signature(path: Path, mtime: int, size: int) -> tuple[bytes, int, int]:
+    with Image.open(path) as opened:
+        mark = opened.convert("RGBA")
+    # Scanned ink trails off into alpha values of 1 or 2, which would defeat a
+    # bare getbbox() and leave the margin in place. The margin is what gets
+    # sized, so leaving it renders the ink smaller than asked for and floating
+    # above the baseline instead of sitting on it.
+    box = mark.getchannel("A").point(lambda level: 255 if level > 8 else 0).getbbox()
+    if box:
+        mark = mark.crop(box)
+    faded = mark.getchannel("A").point(lambda level: round(level * layout.SIGNATURE_OPACITY))
+    mark.putalpha(faded)
+    buffer = BytesIO()
+    mark.save(buffer, format="PNG")
+    return (buffer.getvalue(), mark.width, mark.height)
+
+
 def _signature_box(spec: StripSpec) -> tuple[float, float]:
     """The signature's drawn size, bounded on both axes and cropped to its ink."""
     if not spec.signature:
         return (0.0, 0.0)
-    with Image.open(spec.signature) as opened:
-        mark = opened.convert("RGBA")
-    box = mark.getchannel("A").point(lambda level: 255 if level > 8 else 0).getbbox()
-    if box:
-        mark = mark.crop(box)
-    width, height = mark.size
+    _, width, height = prepared_signature(spec.signature)
     scale = min(spec.signature_width / width, layout.ROW2_HEIGHT / height)
     return (width * scale, height * scale)
 
@@ -505,32 +531,30 @@ def _faded(path: Path, opacity: float, destination: Path) -> Path:
     into the alpha channel instead, which composites identically because the
     paper behind is opaque.
     """
-    if path.suffix.lower() == ".svg":
-        source = path.read_text(encoding="utf-8")
-        faded = re.sub(r"<svg\b", f'<svg opacity="{opacity:g}"', source, count=1)
-        destination.write_text(faded, encoding="utf-8")
-        return destination
-    with Image.open(path) as opened:
-        mark = opened.convert("RGBA")
-    alpha = mark.getchannel("A").point(lambda level: round(level * opacity))
-    mark.putalpha(alpha)
-    mark.save(destination, format="PNG")
+    destination.write_bytes(_faded_bytes(path, opacity, path.stat().st_mtime_ns))
     return destination
 
 
+@cache
+def _faded_bytes(path: Path, opacity: float, mtime: int) -> bytes:
+    """Prepared once per mark, not once per card: a batch shares one body."""
+    if path.suffix.lower() == ".svg":
+        source = path.read_text(encoding="utf-8")
+        return re.sub(r"<svg\b", f'<svg opacity="{opacity:g}"', source, count=1).encode("utf-8")
+    with Image.open(path) as opened:
+        mark = opened.convert("RGBA")
+    mark.putalpha(mark.getchannel("A").point(lambda level: round(level * opacity)))
+    buffer = BytesIO()
+    mark.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def _signature_asset(spec: StripSpec, directory: Path) -> Path | None:
-    """The signature cropped to its ink and faded, written where Typst can read it."""
+    """The prepared signature, written where the engine can read it."""
     if not spec.signature:
         return None
-    with Image.open(spec.signature) as opened:
-        mark = opened.convert("RGBA")
-    box = mark.getchannel("A").point(lambda level: 255 if level > 8 else 0).getbbox()
-    if box:
-        mark = mark.crop(box)
-    alpha = mark.getchannel("A").point(lambda level: round(level * layout.SIGNATURE_OPACITY))
-    mark.putalpha(alpha)
     target = directory / "signature.png"
-    mark.save(target, format="PNG")
+    target.write_bytes(prepared_signature(spec.signature)[0])
     return target
 
 
