@@ -25,12 +25,9 @@ The layout is the same in every one — same proportions, same alignment, no sep
 ```sh
 git clone https://github.com/RxChi1d/exifcard && cd exifcard
 uv sync
-uv run exifcard install-browser
 ```
 
 `uv sync` installs the exact dependency versions in `uv.lock` — the ones this tool is tested against. That matters more here than it usually does: HEIC encoding, JPEG quantization table passthrough and the lossless composite all rest on behaviour its dependencies do not document, so a drifted version can break a format rather than merely change a number.
-
-`install-browser` downloads the Chromium build that renders the info strip — see [How it works](#how-it-works). On Linux add `--with-deps`, which also installs the system libraries Chromium needs to start.
 
 Optionally install `jpegtran` (macOS `brew install jpeg-turbo`, Debian/Ubuntu `apt install libjpeg-turbo-progs`) if you want `--lossless`.
 
@@ -40,7 +37,6 @@ If you would rather have `exifcard` on your PATH everywhere:
 
 ```sh
 uv tool install git+https://github.com/RxChi1d/exifcard
-exifcard install-browser
 ```
 
 The trade-off is that a tool install resolves dependencies afresh instead of reading `uv.lock`, so you get whatever satisfies the version ranges on the day you install rather than the combination the tests ran against.
@@ -165,7 +161,7 @@ Output is the photo's native resolution by default. Compression discards what yo
 The photo and the info strip never overlap, so they are made separately and joined:
 
 ```
-Chromium renders only the strip        Pillow assembles the card
+Typst renders only the strip           Pillow assembles the card
 ┌──────────────────┐                   ┌──────────────────┐
 │                  │                   │  photo bytes,    │
 │   (no photo)     │                   │  untouched       │
@@ -174,9 +170,9 @@ Chromium renders only the strip        Pillow assembles the card
 └──────────────────┘                   └──────────────────┘
 ```
 
-The browser is there for text — letter-spacing, kerning and edge-to-edge alignment at exactly the design's values. Because it only ever sees the strip, the photo is never re-sampled, colour-converted, or bounded by the browser's surface limits. Type size is compensated for portrait proportions, so a tall card is not a card with small lettering.
+The typesetter is there for text — tracking and the font's own kerning at exactly the design's values. Where each element sits is worked out first, in design units; the engine only sets the type and rasterizes it. Because it only ever sees the strip, the photo is never re-sampled or colour-converted. Type size is compensated for portrait proportions, so a tall card is not a card with small lettering.
 
-Fonts and brand marks ship with the package, so a card renders identically on any machine and the tool works offline.
+Fonts and brand marks ship with the package and no system font is ever consulted, so a card renders identically on any machine and the tool works offline. The test suite holds that to the letter: its reference images are compared byte for byte on macOS, Linux and Windows.
 
 **[Design notes](docs/design.md)** explains each of those choices, with the measurements behind them.
 

@@ -141,21 +141,37 @@ def write_lossless_jpeg(
     offset: tuple[int, int],
     destination: Path,
     params: dict,
+    exif: bytes | None = None,
+    icc_profile: bytes | None = None,
 ) -> None:
     """Composite at the DCT level so the photo's coefficients are copied verbatim.
 
     The canvas is encoded normally -- it is flat paper and text, which costs
     almost nothing -- and then the untouched source JPEG is dropped into place.
+
+    The markers ride on the canvas, not on the dropped photo. `-copy` governs
+    what survives from the file jpegtran is editing, which is the canvas; the
+    photo contributes only its coefficients. Writing them here and copying all
+    of them is what keeps `--lossless` from quietly returning a card with no
+    EXIF and no colour profile -- which for a wide-gamut photo means its own
+    pixels get read as sRGB, so the subject of the card comes out wrong while
+    every pixel is bit-exact.
     """
     x, y = offset
     if x % MCU or y % MCU:
         raise ValueError(f"drop offset {offset} is not aligned to a {MCU}px boundary")
 
+    written = dict(params)
+    if exif:
+        written["exif"] = exif
+    if icc_profile:
+        written["icc_profile"] = icc_profile
+
     with tempfile.TemporaryDirectory() as tmp:
         base = Path(tmp) / "base.jpg"
-        canvas.save(base, format="JPEG", **params)
+        canvas.save(base, format="JPEG", **written)
         result = subprocess.run(
-            ["jpegtran", "-copy", "none", "-drop", f"+{x}+{y}", str(photo_path), str(base)],
+            ["jpegtran", "-copy", "all", "-drop", f"+{x}+{y}", str(photo_path), str(base)],
             capture_output=True,
         )
         if result.returncode != 0:

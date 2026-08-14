@@ -11,7 +11,7 @@ Every number here was measured rather than estimated, on a 33MP Sony α7C II JPE
 The photo and the info strip never overlap. That is not an observation about the design, it is the hinge the implementation turns on:
 
 ```
-Chromium renders only the strip        Pillow assembles the card
+Typst sets only the strip              Pillow assembles the card
 ┌──────────────────┐                   ┌──────────────────┐
 │                  │                   │  photo bytes,    │
 │   (no photo)     │                   │  untouched       │
@@ -20,25 +20,55 @@ Chromium renders only the strip        Pillow assembles the card
 └──────────────────┘                   └──────────────────┘
 ```
 
-Handing the whole card to the browser would be simpler and would cost four things, none of them necessary: the photo gets re-sampled, converted into the screenshot's colour space, flattened to 8 bits, and bounded by Chromium's maximum surface size. Keeping it out means the photo's pixels reach the output file as they left the camera.
+Handing the whole card to the renderer would be simpler and would cost three things, none of them necessary: the photo gets re-sampled, converted into the renderer's colour space, and flattened to 8 bits. This is not hypothetical. Passing a 3000×2002 JPEG through Typst at 1:1 with no scaling at all changes 22% of its pixels, by up to 5 levels, and takes 1.4 seconds; a headless browser did the same thing for the same reason. Keeping the photo out means its pixels reach the output file as they left the camera.
+
+Where each element sits is worked out in Python, in design units, before anything is drawn. The renderer is handed absolute positions and asked only to set the type and rasterize it. That was forced at first — a Typst grid cell sizes itself from its content rather than from a height declared on the box inside it, which left the exposure readout half a pixel high — but it is the better division: `strip.measure` and `strip.render` then answer from the same arithmetic and cannot drift apart.
 
 ## Text rendering
 
-The info strip is typeset by Chromium rather than drawn with Pillow. Shipping a 95MB Chromium to typeset one strip of text is a real cost, so it is worth stating what it buys.
+The strip is typeset by Typst rather than drawn with Pillow. Shipping a typesetting engine to set one strip of text is a real cost, so it is worth stating what it buys.
 
 The design specifies letter-spacing on every text element — `.1em` on the exposure readout, `.04em` on the body model, `.03em` on the lens name. **Pillow has no tracking API.** `ImageDraw.text` takes `spacing`, which is the gap between lines. Producing `.1em` means drawing character by character and advancing the pen by hand.
 
-Doing that also gives up the font's own metrics. Measured on the bundled Archivo at 100px:
+Doing that also gives up the font's own metrics. Measured on the bundled Archivo at 100pt:
 
 ```
-                        "AV" as a string   "A" + "V" separately
-Chromium                     127.33 px            130.16 px      ← kerning applied
-Pillow (basic layout)        138.00 px            138.00 px      ← identical, so none
+                        "AV" as a string   "A" + "V" separately   difference
+Typst                        130.20               133.00             2.80    ← kerning applied
+Pillow (basic layout)        138.00               138.00             0.00    ← none
 ```
 
-Archivo carries a GPOS table. Pillow's default layout engine ignores it, and the optional Raqm engine is absent from the standard wheels — so a drawing-library implementation would set gear names without the kerning the typeface specifies *and* with hand-rolled tracking on top, on a card whose whole premise is that the typography is exact.
+Archivo carries a GPOS table. Pillow's default layout engine ignores it, and the optional Raqm engine is absent from the standard wheels — this environment reports `HAVE_RAQM` false and falls back silently. So a drawing-library implementation would set gear names without the kerning the typeface specifies *and* with hand-rolled tracking on top, on a card whose whole premise is that the typography is exact.
 
-The strip this produces matches the design reference at a mean difference of 2.8 levels in 255, which is anti-aliasing noise.
+Nor does it need the whole browser. Chromium measured the same pair at 130.141 and 132.969, a difference of 2.828 — the same GPOS table read by the same shaper, since both engines use HarfBuzz. Across the card's real strings the two agree to within 0.03 design px.
+
+## Why not a browser
+
+The strip was rendered by headless Chromium until the numbers stopped justifying it.
+
+```
+                        Chromium                     Typst
+install       190MB browser, downloaded    62MB, an ordinary wheel
+              by a separate command        installed by uv sync
+one strip     89ms                         5.4ms
+one 33MP card 656ms                        463ms
+```
+
+The install figure understates it: `playwright install chromium` fetches both the full browser and the headless shell, about 530MB, for a tool that only ever runs headless.
+
+But the deciding factor was neither size nor speed. **A browser's text output depends on the platform.** Blink rounds the ascent and descent to whole pixels, floors the half-leading, quantizes the line box to 1/64 of a pixel, and then snaps the painted baseline to a whole pixel again — and does not do it identically everywhere. That is why the pixel comparisons had to be a local check that CI never saw, and why this repository's own claim that a card renders identically on any machine was not actually tested.
+
+Typst's does not depend on the platform, and `tests/test_strip_golden.py` now holds it to that: four reference renders, recorded on macOS, compared with `array_equal` on macOS, Linux and Windows. A tolerance there would pass whether or not the guarantee held, which is why there is none.
+
+Three of the browser's behaviours had to be reproduced rather than assumed, each found by measurement:
+
+- **Letter-spacing is applied after every character, the last one included**, so a tracked element carries one unit of empty space on its right edge. Typst tracks between characters only. The same shortfall repeats at every font-fallback boundary, because Typst starts a new shaping run wherever the covering font changes — `α7C II` is one string but two runs, the alpha from Noto Sans and the rest from Archivo, and it came up exactly one unit short.
+- **Typst wraps where the browser overflows.** Wrapping would silently turn one line into two and change a height that has no relief mechanism, which is worse than an overrun that is at least visible. Every text leaf is pinned to its own measured width so it can only overflow.
+- **Typst has no opacity property.** A bundled SVG mark carries its own on the root element, which is what the browser's `opacity` on an `<img>` amounted to; a raster mark has it folded into the alpha channel, which composites identically because the paper behind is opaque.
+
+Blink's rounding was deliberately *not* reproduced. Doing so matched Chromium to 0.0000 and was tried — but it is the platform binding itself, and carrying it into a new renderer would have carried the limitation with it. The design's own numbers are used instead, which moves the card by up to 0.875 design px from what the browser drew on macOS: a few pixels along a glyph edge at the scale a card is rendered.
+
+Typst is pinned exactly, `typst==0.15.0`, not with a floor. It is pre-1.0 and has shipped layout-breaking changes between minor releases, so an upgrade is a full re-verification rather than a routine bump.
 
 ## Lossless compositing
 
@@ -52,6 +82,25 @@ jpegtran-cffi  0.5.2    wheels: none, source only
 ```
 
 So `jpegtran` is the honest dependency. It stays optional, and only `--lossless` needs it. The photo's dimensions must be multiples of 16 because that is the JPEG minimum coded unit; the flag raises rather than falling back, since a promise that silently degrades is worse than an error.
+
+It degraded silently anyway, for a long time, in a way none of that guarded against. `jpegtran -copy` governs which markers survive from the file it is *editing* — the canvas — and not from the photo dropped into it. The canvas was written with neither EXIF nor a colour profile, under `-copy none`, so `--lossless` returned a card carrying neither: every coefficient bit-exact, and a Display P3 or Adobe RGB photo then read as sRGB, so the subject of the card came out wrong. The markers are now written onto the canvas and copied through.
+
+One difference does remain and cannot be removed. Decoded, the card's last row of photo pixels differs from the source's — 4288 pixels of a 4288×2848 frame, one row, at the seam. The stored coefficients are identical; what changes is that chroma upsampling at the bottom edge now has the strip below it instead of nothing. It is a property of compositing subsampled JPEG at the block level, not a loss in the file.
+
+## Colour
+
+The card is tagged with the photo's ICC profile, because the photo is the subject and its bytes are never touched. That makes the photo's profile the card's, and everything else has to move into it.
+
+The strip does not arrive there by itself. The design states its colours as hex, which means sRGB, and the renderer emits exactly those numbers with no profile of its own — so on a wide-gamut source they were being read in the wrong space. Measured, by taking each colour through the profile the card is tagged with and back:
+
+```
+                    Display P3    Adobe RGB (1998)
+paper, warm             0 levels        1 level
+body ink                1 level         6 levels
+date grey               1 level         4 levels
+```
+
+Small, and small for a reason worth naming: the palette is near-neutral greys and warm off-whites, which sit close together in every space, and the design forbids accent colours. It stays small only for as long as that holds, which is not something the code should assume. The strip is now carried into the card's profile before the two are joined; the photo is not, because it is already in it.
 
 ## Encoding defaults
 
@@ -98,7 +147,7 @@ A long body model next to a long lens name can overrun the row. Rather than wrap
 1. **Tighten** — the exposure readout's tracking (`.1em` → `.04em`) and the gap between the two column groups (`20` → `12`). Worth 8-10% of the width and no type size at all.
 2. **Widen the canvas** — only if tightening was not enough, shrinking the whole block evenly.
 
-Both widths are measured in the browser from the real text, per photo, starting from a clean state — a one-way ratchet would leave a card shrunken because the previous photo in the batch had a long lens name.
+Both widths are measured from the real text, per photo, starting from a clean state — a one-way ratchet would leave a card shrunken because the previous photo in the batch had a long lens name.
 
 This is also why the display-name tables are not for shortening. They turn an internal code into the product's actual name (`ILCE-7CM2` → `α7C II`); deciding which words of a name matter is not the tool's call.
 
@@ -170,7 +219,7 @@ No CJK font is bundled. The smallest usable ones are 9-17MB against the 2.8MB th
 
 Order is the user's because language detection would be a guess: `京都` is the same two code points in Chinese and in Japanese, and the two traditions draw several characters differently. Nothing here inspects the text to pick a font. What the run does instead is say when one caption was drawn from more than one file, which is the point at which letterforms stop matching within a line.
 
-Registered fonts go **last** in the CSS stack. CSS resolves a stack character by character, and every CJK font also covers Latin, so anywhere earlier would hand it the gear names and the exposure readout and restyle the card with nothing said about it.
+Registered fonts go **last** in the font stack. A stack is resolved character by character, and every CJK font also covers Latin, so anywhere earlier would hand it the gear names and the exposure readout and restyle the card with nothing said about it.
 
 ### Size compensation
 
@@ -212,3 +261,4 @@ A mark is only bundled if it survives 11px on warm paper. Nothing's is white let
 - **No RAW.** The card is made at the end of a workflow, after the picture has been chosen and graded, where the file is already a JPEG or HEIF. Reading RAW would pull the tool into developing, which other software already does.
 - **HEIC above ~28MP needs tiling**, which is applied automatically. Without it libheif writes a file it cannot read back.
 - **`--lossless` needs `jpegtran` on PATH**, which has no standard package on Windows. The flag reports that rather than failing obscurely; everything else works there.
+- **A character no available font covers renders as an empty box.** No system font is ever consulted, which is what makes a card reproducible, so there is nothing to fall back to. The run says which characters before it renders.

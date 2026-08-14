@@ -78,7 +78,7 @@ def resolve_format(photo: Path, requested: str | None) -> str:
     return encode.format_for(photo) or "jpg"
 
 
-def render(photo_path: Path, destination: Path, options: Options, browser=None) -> Outcome:
+def render(photo_path: Path, destination: Path, options: Options) -> Outcome:
     notes: list[str] = []
     fmt = resolve_format(photo_path, options.fmt)
 
@@ -140,7 +140,7 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
             canvas_width=layout.canvas_width_for(photo.width, photo.height),
             fonts=options.fonts,
         )
-        spec = strip.fit(spec, browser=browser)
+        spec = strip.fit(spec)
         if spec.canvas_width > layout.CANVAS_WARN:
             # Not a failure: gear names are printed in full whatever it costs.
             # But the cost is this card's type reading smaller than the rest of
@@ -151,7 +151,9 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
                 f"so the type reads at {layout.CANVAS_MAX / spec.canvas_width:.0%} of baseline; "
                 f'a shorter gear table entry for "{longest}" would keep it at full size'
             )
-        strip_image = strip.render(spec, browser=browser)
+        # The card is tagged with the photo's profile, so the strip has to be
+        # carried into it before the two are joined. The photo is untouched.
+        strip_image = compose.strip_in_profile(strip.render(spec), icc)
 
         lossless = False
         if options.lossless:
@@ -178,7 +180,13 @@ def render(photo_path: Path, destination: Path, options: Options, browser=None) 
                     f"it starts at {offset} in {options.frame} mode"
                 )
             encode.write_lossless_jpeg(
-                card, photo_path, offset, destination, encode.source_jpeg_params(photo_path)
+                card,
+                photo_path,
+                offset,
+                destination,
+                encode.source_jpeg_params(photo_path),
+                exif=exif,
+                icc_profile=icc,
             )
             lossless = True
         else:

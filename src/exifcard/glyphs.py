@@ -1,13 +1,15 @@
 """Warn when the card's text needs a glyph no font has, or more than one font.
 
-Neither raises: the browser silently draws a fallback or a tofu box, and the
-card looks subtly wrong in a way nobody notices until much later. Archivo has
-no Greek alpha, for instance, which matters the moment a Sony body is written
-the way Sony writes it -- α7C II.
+Neither raises. A character nothing covers comes out as an empty box, on every
+machine -- no system font is ever consulted -- so the card is wrong in a way
+that is at least visible. It is still worth saying so before the render rather
+than after, because nobody reads a caption they have already seen a hundred
+times. Archivo has no Greek alpha, for instance, which matters the moment a
+Sony body is written the way Sony writes it -- α7C II.
 
 Coverage here is read from the font files, which says what each one could draw,
-not which one the browser chose. That is the same information CSS resolves the
-stack with, in the same order, but it is not a record of what happened.
+not which one the renderer chose. That is the same information the font stack
+is resolved with, in the same order, but it is not a record of what happened.
 """
 
 from __future__ import annotations
@@ -65,7 +67,7 @@ def missing(*texts: str, fonts: tuple[Path, ...] = ()) -> list[str]:
 
 def describe(absent: list[str]) -> str:
     listing = ", ".join(f"{char!r} (U+{ord(char):04X})" for char in absent)
-    return f"no available font can draw {listing}; it will render as a fallback or a blank box"
+    return f"no available font can draw {listing}; it will render as an empty box"
 
 
 def spread(text: str, fonts: tuple[Path, ...] = ()) -> dict[str, str]:

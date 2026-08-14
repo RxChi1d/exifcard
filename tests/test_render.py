@@ -8,8 +8,6 @@ from PIL import Image
 
 from exifcard import compose, encode, layout, render
 
-pytest.importorskip("playwright.sync_api")
-
 
 @pytest.fixture
 def photo(tmp_path):
@@ -169,3 +167,81 @@ def test_lossless_refuses_rather_than_silently_degrading(photo, tmp_path):
     if encode.jpegtran_available():
         assert not ok
         assert "multiple of 16" in reason
+
+
+def test_the_strip_is_carried_into_the_photos_colour_space(photo, tmp_path, monkeypatch):
+    """The card is tagged with the photo's profile, so the strip has to move.
+
+    The design states its colours as hex, which is sRGB. Left alone, those exact
+    numbers get read in the photo's space instead, and the paper and ink shift
+    away from the values the design specifies -- measured at six levels on the
+    darkest ink against Adobe RGB.
+
+    What is checked here is the wiring, not the arithmetic: that the profile the
+    card will be tagged with is the one the strip is carried into. The colour
+    maths belongs to littlecms, and a wide-gamut profile cannot be conjured to
+    test it against -- Pillow only builds sRGB, and shipping a real one as a
+    fixture would test that library rather than this one.
+    """
+    from PIL import ImageCms
+
+    profile = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    tagged = tmp_path / "tagged.jpg"
+    with Image.open(photo) as source:
+        source.save(tagged, format="JPEG", icc_profile=profile, exif=source.getexif().tobytes())
+
+    seen: list[bytes | None] = []
+    original = compose.strip_in_profile
+    monkeypatch.setattr(
+        compose, "strip_in_profile", lambda image, icc: seen.append(icc) or original(image, icc)
+    )
+    render.render(tagged, tmp_path / "card.jpg", render.Options())
+
+    assert seen == [profile]
+    with Image.open(tmp_path / "card.jpg") as card:
+        assert card.info.get("icc_profile") == profile
+
+
+def test_a_photo_without_a_profile_leaves_the_strip_alone(photo):
+    swatch = Image.new("RGB", (1, 1), (38, 36, 31))
+    assert compose.strip_in_profile(swatch, None).getpixel((0, 0)) == (38, 36, 31)
+
+
+def test_an_unreadable_profile_does_not_fail_the_card(photo):
+    swatch = Image.new("RGB", (1, 1), (38, 36, 31))
+    assert compose.strip_in_profile(swatch, b"not a profile").getpixel((0, 0)) == (38, 36, 31)
+
+
+def test_lossless_keeps_the_profile_and_the_exif(photo, tmp_path):
+    """A bit-exact photo tagged with nothing is not a bit-exact card.
+
+    jpegtran copies markers from the file it is editing, which is the canvas --
+    not from the photo dropped into it. With none written there and `-copy none`
+    on top, `--lossless` returned a card with no EXIF and no colour profile: the
+    pixels were exact and a wide-gamut photo was then read as sRGB, so the
+    subject came out wrong while every coefficient was right.
+    """
+    if not encode.jpegtran_available():
+        pytest.skip("jpegtran is not installed")
+
+    from PIL import ImageCms
+
+    profile = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    tagged = tmp_path / "tagged.jpg"
+    with Image.open(photo) as source:
+        source.save(
+            tagged,
+            format="JPEG",
+            icc_profile=profile,
+            exif=source.getexif().tobytes(),
+            qtables=[[1] * 64, [1] * 64],
+            subsampling=1,
+        )
+
+    destination = tmp_path / "card.jpg"
+    outcome = render.render(tagged, destination, render.Options(lossless=True))
+
+    assert outcome.lossless
+    with Image.open(destination) as card:
+        assert card.info.get("icc_profile") == profile
+        assert card.getexif().get(0x0110) == "ILCE-7CM2"
