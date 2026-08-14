@@ -151,7 +151,9 @@ def render(photo_path: Path, destination: Path, options: Options) -> Outcome:
                 f"so the type reads at {layout.CANVAS_MAX / spec.canvas_width:.0%} of baseline; "
                 f'a shorter gear table entry for "{longest}" would keep it at full size'
             )
-        strip_image = strip.render(spec)
+        # The card is tagged with the photo's profile, so the strip has to be
+        # carried into it before the two are joined. The photo is untouched.
+        strip_image = compose.strip_in_profile(strip.render(spec), icc)
 
         lossless = False
         if options.lossless:
@@ -178,7 +180,13 @@ def render(photo_path: Path, destination: Path, options: Options) -> Outcome:
                     f"it starts at {offset} in {options.frame} mode"
                 )
             encode.write_lossless_jpeg(
-                card, photo_path, offset, destination, encode.source_jpeg_params(photo_path)
+                card,
+                photo_path,
+                offset,
+                destination,
+                encode.source_jpeg_params(photo_path),
+                exif=exif,
+                icc_profile=icc,
             )
             lossless = True
         else:

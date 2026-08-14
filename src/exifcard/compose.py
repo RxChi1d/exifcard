@@ -1,15 +1,23 @@
 """Place the photo and the rendered strip onto one canvas.
 
 The photo is copied, never resampled, unless an explicit output width forces a
-resize. That is the whole reason the browser only renders the strip: at default
+resize. That is the whole reason the renderer only draws the strip: at default
 settings the photo's pixels reach the output file exactly as they left the
 camera.
+
+Which is also what makes the colour space the photo's to decide. The card is
+tagged with the photo's profile, so the strip -- drawn in sRGB, because that is
+what the design's hex values mean -- has to be carried into that profile before
+the two are joined. See `strip_in_profile`.
 """
 
 from __future__ import annotations
 
+from functools import cache
+from io import BytesIO
+
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageCms
 
 from . import layout
 
@@ -34,6 +42,46 @@ def apply_orientation(photo: Image.Image, orientation: int) -> Image.Image:
     """
     transform = _TRANSPOSE.get(orientation)
     return photo.transpose(transform) if transform else photo
+
+
+@cache
+def _to_profile(icc_profile: bytes):
+    """A transform from sRGB into the card's profile, built once per profile."""
+    return ImageCms.buildTransformFromOpenProfiles(
+        ImageCms.createProfile("sRGB"),
+        ImageCms.ImageCmsProfile(BytesIO(icc_profile)),
+        "RGB",
+        "RGB",
+    )
+
+
+def strip_in_profile(strip: Image.Image, icc_profile: bytes | None) -> Image.Image:
+    """The strip carried into the profile the finished card will be tagged with.
+
+    The design states its colours as hex, which means sRGB, and the renderer
+    emits exactly those numbers with no profile of its own. The card then
+    inherits the photo's profile -- so on a Display P3 or Adobe RGB source those
+    same numbers get read in the wrong space and the paper and ink shift.
+
+    It is small today: the palette is near-neutral greys and warm off-whites,
+    which sit close together in every space, and the design forbids accent
+    colours. Measured, the worst of it is six levels on the darkest ink against
+    Adobe RGB and one against Display P3. It stays small only for as long as
+    that palette holds, which is not something this function should assume.
+
+    The photo is never touched. It already is in its own profile, and moving it
+    is what the whole pipeline exists to avoid.
+    """
+    if not icc_profile:
+        return strip
+    try:
+        return ImageCms.applyTransform(strip, _to_profile(icc_profile))
+    except (ImageCms.PyCMSError, OSError):
+        # An unreadable profile is the photo's problem, not a reason to fail the
+        # card: the strip stays as it is, which is what it did before this
+        # existed. The card is still tagged with the profile, so the photo -- the
+        # subject -- remains correct.
+        return strip
 
 
 def _hex_to_rgb(value: str) -> tuple[int, int, int]:
