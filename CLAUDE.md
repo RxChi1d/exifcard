@@ -61,6 +61,7 @@ Settled decisions from a specification that is not in this repository, so they c
 - **Missing values are omitted, never replaced.** No `Unknown`, no dash, no `N/A`, and the layout does not collapse to fill the gap.
 - Gear tables map an internal code onto the product's real name. They are an override list, never an allow list, and **never a place to shorten anything** — length is `strip.fit`'s problem.
 - Any aspect ratio is accepted and the photo is never cropped.
+- **A template is a Python module, not a data format.** With one design there is no schema — `layout.py` and the positions computed in `strip.py` *are* the template, and a configuration layer over a single call site would only state the same thing twice. The abstraction is earned by a second design that actually ships, and it is then whatever those two measurably differ by. Someone who wants overlapping elements, or a layout the fit solver cannot settle, forks: that is their card, and guarding it is not this tool's job.
 
 ## Traps
 
