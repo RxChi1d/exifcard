@@ -43,8 +43,6 @@ from PIL import Image
 from . import layout
 from .metadata import CardData
 
-TYPST_VERSION = "0.15.0"
-
 FONTS = Path(__file__).parent / "assets" / "fonts"
 
 _FONT_FACES = [
@@ -123,7 +121,6 @@ def _family_name(path: Path) -> str:
 # Typst lays out in points and rasterizes at a requested ppi. At 72 ppi one
 # point is one pixel, so a design unit maps onto a point and the scale factor
 # rides entirely on the ppi. Nothing in the design is ever pre-multiplied.
-POINTS_PER_DESIGN_UNIT = 1.0
 BASE_PPI = 72.0
 
 
