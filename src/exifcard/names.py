@@ -52,6 +52,27 @@ LENS_NAMES = {
     "TAMRON 70-180mm F/2.8 Di III VC VXD G2": "70-180mm F2.8 Di III VC VXD G2",
     "XF33mmF1.4 R LM WR": "XF 33mm F1.4 R LM WR",
     "XF16-55mmF2.8 R LM WR": "XF 16-55mm F2.8 R LM WR",
+    # Phones describe the module rather than the lens -- "back triple camera
+    # 6.765mm f/1.78" says which element fired, in a physical focal length
+    # nobody recognises, and repeats an aperture the exposure line already
+    # shows. What the row is for is knowing which lens took the picture and
+    # what it is, so these read like every other lens here: which one, then its
+    # own focal length and aperture.
+    #
+    # "Main" rather than Apple's "Fusion": Ultra Wide and Telephoto are already
+    # the whole industry's words, and only the primary has a maker's name for
+    # it, so borrowing it would leave one proprietary term among two generic
+    # ones and read differently on the next maker's phone. Apple's own word for
+    # the primary is worse still -- it calls it Wide, which reads as a claim
+    # about angle right next to Ultra Wide.
+    #
+    # The focal lengths are the maker's published 35mm equivalents for the lens
+    # itself, not the value in EXIF: that one moves with the digital crop, which
+    # is why one 6.765mm element reports 48mm on one frame and 30mm on another.
+    # The exposure line carries what the shot used; this carries what the lens
+    # is, and the difference between them is the crop.
+    "iPhone 16 Pro back triple camera 6.765mm f/1.78": "Main 24mm F1.78",
+    "iPhone 16 Pro back triple camera 2.22mm f/2.2": "Ultra Wide 13mm F2.2",
 }
 
 # Some third-party lenses omit the maker from LensModel entirely -- Tamron's

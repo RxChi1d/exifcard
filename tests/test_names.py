@@ -76,3 +76,34 @@ def test_body_prefix_stripping_leaves_unrelated_names_alone():
     assert names.strip_body_prefix("XF 33mm F1.4 R LM WR", "X-T5") == "XF 33mm F1.4 R LM WR"
     assert names.strip_body_prefix("X-T5", "X-T5") == "X-T5"
     assert names.strip_body_prefix("56mm F1.4", "") == "56mm F1.4"
+
+
+def test_a_phone_lens_reads_as_which_one_and_what_it_is():
+    """The module description EXIF carries says neither.
+
+    "back triple camera 6.765mm f/1.78" is a physical focal length nobody
+    recognises next to an aperture the exposure line already prints, and the
+    row exists to say which lens took the picture.
+    """
+    brand, lens = names.resolve_lens(
+        "iPhone 16 Pro back triple camera 6.765mm f/1.78",
+        "Apple",
+        names.LENS_NAMES,
+        body_model="iPhone 16 Pro",
+    )
+    assert (brand, lens) == ("", "Main 24mm F1.78")
+
+
+def test_a_phone_lens_with_no_entry_still_prints_something_sensible():
+    """An unregistered one falls back to the raw string, minus the body name.
+
+    The tables are an override list, so a phone nobody has registered yet has
+    to keep working -- and the body model is already on the line above.
+    """
+    brand, lens = names.resolve_lens(
+        "iPhone 17 Pro back triple camera 4.2mm f/2.0",
+        "Apple",
+        names.LENS_NAMES,
+        body_model="iPhone 17 Pro",
+    )
+    assert (brand, lens) == ("", "back triple camera 4.2mm f/2.0")
