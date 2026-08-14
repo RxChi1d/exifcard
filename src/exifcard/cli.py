@@ -29,11 +29,6 @@ IO_PANEL = "Input and output"
 ENCODE_PANEL = "Encoding"
 CARD_PANEL = "Card"
 
-BROWSER_HINT = (
-    "Chromium is missing. Run [bold]exifcard install-browser[/] once, then try again."
-)
-
-
 QUALITY_HELP = (
     "Encoder quality. The scale differs per format and the numbers are not "
     "comparable: jpg 1-100 (default 95, plus the source's own chroma sampling), "
@@ -248,59 +243,45 @@ def render_cards(
     written = skipped = 0
     failures: list[tuple[Path, str]] = []
 
-    from playwright.sync_api import Error as PlaywrightError
-    from playwright.sync_api import sync_playwright
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        TimeRemainingColumn(),
+        console=console,
+        disable=len(photos) < 2,
+    ) as progress:
+        task = progress.add_task("Rendering", total=len(photos))
+        for photo in photos:
+            out_dir = out_dirs[photo]
+            target = render.plan_destination(
+                photo, out_dir, render.resolve_format(photo, fmt)
+            )
+            if not _resolve_overwrite(target, overwrite_state):
+                skipped += 1
+                progress.advance(task)
+                continue
 
-    with sync_playwright() as pw:
-        try:
-            browser = pw.chromium.launch()
-        except PlaywrightError as failure:
-            if "Executable doesn't exist" in str(failure):
-                err.print(f"[red]{BROWSER_HINT}[/]")
-                raise typer.Exit(1) from None
-            raise
-        try:
-            with Progress(
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TextColumn("{task.completed}/{task.total}"),
-                TimeRemainingColumn(),
-                console=console,
-                disable=len(photos) < 2,
-            ) as progress:
-                task = progress.add_task("Rendering", total=len(photos))
-                for photo in photos:
-                    out_dir = out_dirs[photo]
-                    target = render.plan_destination(
-                        photo, out_dir, render.resolve_format(photo, fmt)
-                    )
-                    if not _resolve_overwrite(target, overwrite_state):
-                        skipped += 1
-                        progress.advance(task)
-                        continue
-
-                    options.location = caption_files[out_dir].get(photo.name) or location or ""
-                    try:
-                        outcome = render.render(photo, target, options, browser=browser)
-                    except (RuntimeError, OSError, ValueError) as failure:
-                        # One unreadable file should not cost you the other 199.
-                        # The run finishes, names what failed, and exits non-zero
-                        # so a script still notices.
-                        failures.append((photo, str(failure)))
-                        progress.advance(task)
-                        continue
-                    written += 1
-                    if verbose:
-                        console.print(
-                            f"  {photo.name} -> {target} "
-                            f"({outcome.card_size[0]}x{outcome.card_size[1]}"
-                            f"{', lossless' if outcome.lossless else ''})"
-                        )
-                    for note in outcome.notes:
-                        err.print(f"  [yellow]{photo.name}: {note}[/]")
-                    progress.advance(task)
-        finally:
-            browser.close()
+            options.location = caption_files[out_dir].get(photo.name) or location or ""
+            try:
+                outcome = render.render(photo, target, options)
+            except (RuntimeError, OSError, ValueError) as failure:
+                # One unreadable file should not cost you the other 199.
+                # The run finishes, names what failed, and exits non-zero
+                # so a script still notices.
+                failures.append((photo, str(failure)))
+                progress.advance(task)
+                continue
+            written += 1
+            if verbose:
+                console.print(
+                    f"  {photo.name} -> {target} "
+                    f"({outcome.card_size[0]}x{outcome.card_size[1]}"
+                    f"{', lossless' if outcome.lossless else ''})"
+                )
+            for note in outcome.notes:
+                err.print(f"  [yellow]{photo.name}: {note}[/]")
+            progress.advance(task)
 
     destinations = ", ".join(str(d) for d in sorted(set(out_dirs.values())))
     summary = f"[green]{written}[/] written, {skipped} skipped"
@@ -350,38 +331,6 @@ def locations_cmd(
 
     added = locations.scaffold(target, entries)
     console.print(f"[green]{added}[/] new entr{'y' if added == 1 else 'ies'} appended to {target}")
-
-
-@app.command("install-browser")
-def install_browser(
-    with_deps: Annotated[
-        bool,
-        typer.Option(
-            "--with-deps",
-            help="Also install Chromium's system libraries. Needed on most Linux "
-            "distributions, where the browser otherwise downloads but will not start. "
-            "Uses sudo.",
-        ),
-    ] = False,
-) -> None:
-    """Download the Chromium build used to render the info strip.
-
-    Playwright keeps its browsers outside the Python package, so this has to
-    happen once after installing. It is a command of its own because an
-    installed tool exposes only exifcard's own entry point -- `playwright` is
-    not on PATH, so the usual `playwright install chromium` is not available.
-    """
-    import subprocess
-
-    command = [sys.executable, "-m", "playwright", "install"]
-    if with_deps:
-        command.append("--with-deps")
-    command.append("chromium")
-
-    result = subprocess.run(command)
-    if result.returncode != 0:
-        raise typer.Exit(result.returncode)
-    console.print("[green]Chromium installed.[/]")
 
 
 @app.command("config-example")

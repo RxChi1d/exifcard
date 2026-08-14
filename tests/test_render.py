@@ -8,8 +8,6 @@ from PIL import Image
 
 from exifcard import compose, encode, layout, render
 
-pytest.importorskip("playwright.sync_api")
-
 
 @pytest.fixture
 def photo(tmp_path):

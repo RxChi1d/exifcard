@@ -8,10 +8,10 @@ requires-python = ">=3.12"
 dependencies = [
     "pillow>=12.0.0",
     "pillow-heif>=1.5.0",
-    "playwright>=1.62.0",
     "numpy>=2.0.0",
     "typer>=0.27.0",
     "fonttools>=4.55.0",
+    "typst==0.15.0",
 ]
 
 [project.scripts]
@@ -34,9 +34,6 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = [
-    "golden: compares rendered pixels against a reference image. Run locally; excluded in CI because text rasterization differs between platforms.",
-]
 
 [tool.ruff]
 line-length = 100

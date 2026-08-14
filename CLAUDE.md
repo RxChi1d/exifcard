@@ -10,17 +10,15 @@ It records what the code cannot tell you: decisions, their constraints, and the 
 
 ## Scope
 
-A command-line tool, run locally, over local files. **Not** an API server, not a web service, not a GUI. Do not add HTTP endpoints, a daemon, or a browser UI. Chromium is present strictly as an internal text renderer.
+A command-line tool, run locally, over local files. **Not** an API server, not a web service, not a GUI. Do not add HTTP endpoints, a daemon, or a browser UI. Typst is present strictly as an internal text renderer.
 
 ## Commands
 
 ```sh
-uv run exifcard install-browser   # once; nothing renders without it
-uv run pytest                     # full suite
-uv run pytest -m "not golden"     # what CI runs
+uv run pytest                     # full suite; the same one CI runs
 ```
 
-`golden` tests compare rendered pixels and are local-only: text rasterizes differently on Linux. Anything that guards behaviour must therefore live outside that marker.
+Everything ships in the wheel, so there is no install step beyond `uv sync`. Pixel comparisons run on every platform and are compared byte for byte -- that is the guarantee, so a tolerance there would defeat the test.
 
 ## Architecture
 
@@ -30,7 +28,7 @@ The photo and the info strip never overlap. That is the hinge the whole implemen
 metadata.py  EXIF -> display strings        names.py   gear display-name tables
      |                                      logos.py   Make/Model -> bundled mark
      v
-strip.py     Chromium renders ONLY the strip, on its own design canvas
+strip.py     resolves the layout, then Typst sets ONLY the strip
      |
      v
 compose.py   photo pasted at native size + strip below   (numpy/Pillow)
@@ -41,9 +39,9 @@ encode.py    per-format encoders, including the jpegtran lossless path
 
 `render.py` sequences those for one photo; `cli.py` handles batching, prompts and progress. `layout.py` holds every design constant at the 760px baseline.
 
-- **The photo never enters the browser**, which is what keeps its pixels, ICC profile and bit depth intact and a 40MP card within Chromium's surface limits.
-- **The browser is not replaceable by Pillow.** Pillow has no letter-spacing API and its default layout ignores the font's kerning; the design depends on both. Measurements in `docs/design.md`.
-- **Scaling happens through `device_scale_factor`**, never by pre-multiplying lengths. Every value in `layout.py` and in the generated HTML stays at its baseline number.
+- **The photo never enters the renderer**, which is what keeps its pixels, ICC profile and bit depth intact.
+- **The typesetter is not replaceable by Pillow.** Pillow has no tracking API and its default layout ignores the font's kerning; the design depends on both. Measurements in `docs/design.md`.
+- **Scaling happens through the output resolution**, never by pre-multiplying lengths. Every value in `layout.py` and in the generated source stays at its baseline number.
 
 ## Design rules
 

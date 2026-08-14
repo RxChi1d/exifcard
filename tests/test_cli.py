@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-import sys
 
-import pytest
 from PIL import Image
 from typer.testing import CliRunner
 
 from exifcard.cli import app
-
-pytest.importorskip("playwright.sync_api")
 
 runner = CliRunner()
 
@@ -140,25 +136,5 @@ def test_captions_are_read_from_the_album_folder(tmp_path):
 
     # The console wraps long lines, so compare on collapsed whitespace.
     assert "Fushimi Inari, Kyoto" in " ".join(result.output.split())
-
-
-def test_install_browser_passes_with_deps_through(monkeypatch):
-    """CI runs this exact command, so its arguments have to be right.
-
-    Without --with-deps on Linux the browser downloads but will not start,
-    which is a failure a user meets long after the install appeared to work.
-    """
-    calls = []
-    monkeypatch.setattr(
-        "subprocess.run", lambda command, *a, **k: calls.append(command) or _ok()
-    )
-
-    runner.invoke(app, ["install-browser"])
-    runner.invoke(app, ["install-browser", "--with-deps"])
-
-    assert calls[0] == [sys.executable, "-m", "playwright", "install", "chromium"]
-    assert calls[1] == [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
-
-
 class _ok:
     returncode = 0
