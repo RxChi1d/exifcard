@@ -25,5 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--lossless` composites at the DCT level with `jpegtran`, leaving the photo area bit-for-bit identical to the source. It requires a JPEG whose dimensions are multiples of 16 and raises rather than falling back.
 - Warnings when a source carries more than 8 bits per channel, and when a character has no glyph in any bundled font.
 - Fonts and brand marks ship with the package and no system font is consulted, so a card renders identically on macOS, Linux and Windows. All three run in CI.
+- An Agent Skill at `skills/exifcard/`, installable into a coding agent with `npx skills add RxChi1d/exifcard`. It carries what `--help` cannot: that a run which warns still writes the card and exits zero, that `--dry-run` renders nothing and so predicts no failure, that `--exif` keeps the source GPS by default, and that a caption is the user's words rather than the agent's to edit.
 
 [Unreleased]: https://github.com/RxChi1d/exifcard/commits/main

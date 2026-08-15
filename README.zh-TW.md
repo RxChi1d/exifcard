@@ -41,6 +41,26 @@ uv tool install git+https://github.com/RxChi1d/exifcard
 
 代價是 tool 安裝會**重新解析**相依，而不是讀取 `uv.lock`。你拿到的是安裝當天符合版本範圍的那一組，不是測試實際跑過的那一組。
 
+### Agent skill
+
+如果你平常透過 coding agent 工作，本專案另外附了一份 [Agent Skill](https://agentskills.io)：
+
+```sh
+npx skills add RxChi1d/exifcard
+```
+
+安裝器會問要裝進哪個 agent。它裝在當前專案；加上 `--global` 則改裝到你的使用者帳號，這樣不管照片放在哪個資料夾都用得到。要哪一種由你決定。
+
+這份 skill 告訴 agent 這個工具是做什麼的、哪個指令負責什麼，以及動手之前重要的幾條規則：它不會替你代寫地點說明、`--lossless` 只會失敗而不會悄悄降級、在非互動 shell 裡遇到既有卡片是錯誤。這份 skill 刻意寫得短，因為參數的權威仍然是 `--help`。
+
+若安裝器沒有涵蓋你用的 agent，直接請它自己裝：
+
+```
+Install the Agent Skill at https://github.com/RxChi1d/exifcard/tree/main/skills/exifcard
+into the skills directory you read. Ask me first whether to install it for this
+project or for my user account.
+```
+
 ## 使用
 
 從 clone 執行時，下列指令前面加 `uv run`。若要在照片所在的任何目錄執行，再加上 `--project /path/to/exifcard`。裝成全域指令則不需要前綴。

@@ -41,6 +41,26 @@ uv tool install git+https://github.com/RxChi1d/exifcard
 
 The trade-off is that a tool install resolves dependencies afresh instead of reading `uv.lock`. You get whatever satisfies the version ranges on the day you install, not the combination the tests ran against.
 
+### Agent skill
+
+If you work through a coding agent, this repository also ships an [Agent Skill](https://agentskills.io):
+
+```sh
+npx skills add RxChi1d/exifcard
+```
+
+The installer asks which agent to install into. It installs into the current project; `--global` installs it for your user account instead, so it is there whichever folder your photos are in. Which of the two you want is your call.
+
+The skill tells the agent what the tool is for, which command does what, and the few rules that matter before it runs anything: it never invents a location caption for you, `--lossless` fails instead of quietly degrading, and an existing card is an error in a non-interactive shell. The skill is short on purpose, because `--help` remains the authority on flags.
+
+For an agent the installer does not cover, ask the agent itself:
+
+```
+Install the Agent Skill at https://github.com/RxChi1d/exifcard/tree/main/skills/exifcard
+into the skills directory you read. Ask me first whether to install it for this
+project or for my user account.
+```
+
 ## Use
 
 From a clone, prefix the commands below with `uv run`. To run them from wherever your photos are, add `--project /path/to/exifcard`. A tool install needs no prefix.
