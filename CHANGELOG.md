@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-15
+
 ### Added
 
 - `exifcard render` turns a photo and its EXIF into a card: the photo at its native resolution on top, a metadata strip below, written as one flat image. Typst sets only the strip and Pillow joins the two, so the photo is never re-sampled or colour-converted.
@@ -28,4 +30,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fonts and brand marks ship with the package and no system font is consulted, so a card renders identically on macOS, Linux, and Windows. All three run in CI.
 - An Agent Skill at `skills/exifcard/`, which a coding agent can install with `npx skills add RxChi1d/exifcard`. It carries what `--help` cannot: a run that warns still writes the card and exits zero, `--dry-run` renders nothing and so predicts no failure, `--exif` keeps the source GPS by default, and a caption is the user's words rather than the agent's to edit.
 
-[Unreleased]: https://github.com/RxChi1d/exifcard/commits/main
+[Unreleased]: https://github.com/RxChi1d/exifcard/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/RxChi1d/exifcard/releases/tag/v0.1.0
