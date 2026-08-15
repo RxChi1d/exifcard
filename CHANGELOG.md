@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-08-14
-
 ### Added
 
 - `exifcard render` turns a photo and its EXIF into a card: the photo at its native resolution on top, a metadata strip below, written as one flat image. Typst sets only the strip and Pillow joins the two, so the photo is never re-sampled or colour-converted.
@@ -28,5 +26,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Warnings when a source carries more than 8 bits per channel, and when a character has no glyph in any bundled font.
 - Fonts and brand marks ship with the package and no system font is consulted, so a card renders identically on macOS, Linux and Windows. All three run in CI.
 
-[Unreleased]: https://github.com/RxChi1d/exifcard/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/RxChi1d/exifcard/releases/tag/v0.1.0
+[Unreleased]: https://github.com/RxChi1d/exifcard/commits/main
