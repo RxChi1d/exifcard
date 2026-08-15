@@ -72,8 +72,9 @@ Each of these is silent, or costs more than the fix. The code says so where it h
 - **`--lossless` must raise, never fall back.** A promise that silently degrades is worse than an error.
 - **Bundled marks must survive 11px on warm paper**, which is the size they are actually used at. `logos.toml` records why each one is present or absent.
 - `test-photos/` holds real camera files and is gitignored: they carry GPS and are not ours to publish.
+- **`skills/exifcard/SKILL.md` sits where external installers look, so its path is not ours to rearrange.** `npx skills add` and the Agent Skills standard both expect `skills/<name>/SKILL.md`, and the directory name has to match the skill's `name`. Moving it under `docs/`, or into a hidden `.claude/` or `.agents/` directory, does not fail: the installer simply finds nothing.
 
-Directories are organised by who uses a file: `src/exifcard/assets/` is read by the program and ships in the wheel, `docs/` is read by people, `examples/` is run by users, `tests/` by the suite. A file in the wrong one tends to become an orphan.
+Directories are organised by who uses a file: `src/exifcard/assets/` is read by the program and ships in the wheel, `docs/` is read by people, `examples/` is run by users, `tests/` by the suite, and `skills/` by other people's coding agents after they install it. A file in the wrong one tends to become an orphan.
 
 ## Conventions
 
