@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 
 from PIL import Image
 from typer.testing import CliRunner
@@ -9,6 +10,10 @@ from typer.testing import CliRunner
 from exifcard.cli import app
 
 runner = CliRunner()
+
+
+def plain_output(result):
+    return re.sub(r"\x1b\[[0-9;]*m", "", result.output)
 
 
 def photo(path, size=(600, 400)):
@@ -162,7 +167,7 @@ def test_output_file_rejects_multiple_photos(tmp_path):
     )
 
     assert result.exit_code != 0
-    assert "--output-file requires exactly one photo" in result.output
+    assert "--output-file requires exactly one photo" in plain_output(result)
     assert not target.exists()
 
 
@@ -176,7 +181,7 @@ def test_output_file_cannot_be_combined_with_output_root(tmp_path):
     )
 
     assert result.exit_code != 0
-    assert "--out and --output-file cannot be used together" in result.output
+    assert "--out and --output-file cannot be used together" in plain_output(result)
     assert not target.exists()
 
 
@@ -201,7 +206,7 @@ def test_output_file_format_must_match_explicit_format(tmp_path):
     )
 
     assert result.exit_code != 0
-    assert "does not match the --output-file extension" in result.output
+    assert "does not match the --output-file extension" in plain_output(result)
     assert not target.exists()
 
 
@@ -212,7 +217,7 @@ def test_output_file_dry_run_reports_exact_destination_without_writing(tmp_path)
     result = runner.invoke(app, ["render", str(source), "--output-file", str(target), "--dry-run"])
 
     assert result.exit_code == 0, result.output
-    assert "".join(str(target).split()) in "".join(result.output.split())
+    assert "".join(str(target).split()) in "".join(plain_output(result).split())
     assert not target.exists()
 
 
