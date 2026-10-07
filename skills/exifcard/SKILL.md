@@ -43,6 +43,14 @@ exifcard render ./kyoto/ --dry-run          # show what would be written
 exifcard render ./kyoto/ --location "Kyoto" # one caption for the whole batch
 ```
 
+For one selected photo, `--output-file PATH` sets the exact destination and infers the output format from the supported filename extension:
+
+```sh
+exifcard render photo.jpg --output-file ./cards/DSCF1234_exifcard.jpg
+```
+
+It requires exactly one selected photo, cannot be combined with `--out`, and refuses to overwrite the source. For batches, use `--out ROOT`; cards retain source-derived names and album layout. If `--format` is also supplied with `--output-file`, it must match the destination extension.
+
 exifcard writes cards to `outputs/<source folder name>/` and mirrors the source layout. Without `--out`, that output root is relative to the current working directory, not to the photos.
 
 `--dry-run` previews four things: routing, destinations, which files already exist, and the caption each photo would get. It opens no photo and renders nothing. It cannot detect an unreadable image, a missing glyph, a caption overrun, or a file that `--lossless` cannot process.

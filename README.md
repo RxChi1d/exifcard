@@ -67,9 +67,12 @@ From a clone, prefix the commands below with `uv run`. To run them from wherever
 
 ```sh
 uv run exifcard render photo.jpg                     # one photo
+uv run exifcard render photo.jpg --output-file ./cards/DSCF1234_exifcard.jpg  # exact output path
 uv run exifcard render ./kyoto/ --location "Kyoto"   # a whole folder, one caption
 uv run exifcard render ./kyoto/ --dry-run            # show what would be written
 ```
+
+`--output-file` sets the exact destination for one selected photo; its extension selects the output format. If `--format` is also given, it must match that extension. It cannot be combined with `--out`. For batches, use `--out` to choose the output root; cards retain their source-derived names and album layout.
 
 You will not have a signature file on a first run, so the repository includes one to try the feature with:
 
