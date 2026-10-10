@@ -67,9 +67,12 @@ project or for my user account.
 
 ```sh
 uv run exifcard render photo.jpg                     # 單張照片
+uv run exifcard render photo.jpg --output-file ./cards/DSCF1234_exifcard.jpg  # 指定完整輸出路徑
 uv run exifcard render ./kyoto/ --location "Kyoto"   # 整個資料夾，共用一個地點
 uv run exifcard render ./kyoto/ --dry-run            # 只列出會寫出什麼，不寫檔
 ```
+
+`--output-file` 可為單張選取的照片指定完整輸出路徑；副檔名決定輸出格式。若同時使用 `--format`，格式必須相符。它不能與 `--out` 一起使用。批次處理請用 `--out` 指定輸出根目錄，卡片會沿用來源檔名並保留相簿目錄結構。
 
 第一次執行時你手上不會有簽名檔，所以本專案附了一個，可以直接拿來試這個功能：
 

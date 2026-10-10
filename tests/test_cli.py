@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 
 from PIL import Image
 from typer.testing import CliRunner
@@ -9,6 +10,10 @@ from typer.testing import CliRunner
 from exifcard.cli import app
 
 runner = CliRunner()
+
+
+def plain_output(result):
+    return re.sub(r"\x1b\[[0-9;]*m", "", result.output)
 
 
 def photo(path, size=(600, 400)):
@@ -136,5 +141,85 @@ def test_captions_are_read_from_the_album_folder(tmp_path):
 
     # The console wraps long lines, so compare on collapsed whitespace.
     assert "Fushimi Inari, Kyoto" in " ".join(result.output.split())
+
+
+def test_output_file_writes_to_exact_path_and_uses_target_format(tmp_path):
+    source = photo(tmp_path / "source.jpg")
+    target = tmp_path / "cards" / "original_exifcard.png"
+
+    result = runner.invoke(app, ["render", str(source), "--output-file", str(target), "--force"])
+
+    assert result.exit_code == 0, result.output
+    assert target.is_file()
+    with Image.open(target) as card:
+        assert card.format == "PNG"
+    assert not (tmp_path / "outputs").exists()
+
+
+def test_output_file_rejects_multiple_photos(tmp_path):
+    first = photo(tmp_path / "first.jpg")
+    second = photo(tmp_path / "second.jpg")
+    target = tmp_path / "cards" / "one-card.jpg"
+
+    result = runner.invoke(
+        app,
+        ["render", str(first), str(second), "--output-file", str(target), "--force"],
+    )
+
+    assert result.exit_code != 0
+    assert "--output-file requires exactly one photo" in plain_output(result)
+    assert not target.exists()
+
+
+def test_output_file_cannot_be_combined_with_output_root(tmp_path):
+    source = photo(tmp_path / "source.jpg")
+    target = tmp_path / "cards" / "card.jpg"
+
+    result = runner.invoke(
+        app,
+        ["render", str(source), "--out", str(tmp_path / "out"), "--output-file", str(target)],
+    )
+
+    assert result.exit_code != 0
+    assert "--out and --output-file cannot be used together" in plain_output(result)
+    assert not target.exists()
+
+
+def test_output_file_cannot_overwrite_source_even_with_force(tmp_path):
+    source = photo(tmp_path / "source.jpg")
+    original = source.read_bytes()
+
+    result = runner.invoke(app, ["render", str(source), "--output-file", str(source), "--force"])
+
+    assert result.exit_code != 0
+    assert "must not overwrite the source photo" in result.output
+    assert source.read_bytes() == original
+
+
+def test_output_file_format_must_match_explicit_format(tmp_path):
+    source = photo(tmp_path / "source.jpg")
+    target = tmp_path / "cards" / "card.png"
+
+    result = runner.invoke(
+        app,
+        ["render", str(source), "--output-file", str(target), "--format", "jpg", "--force"],
+    )
+
+    assert result.exit_code != 0
+    assert "does not match the --output-file extension" in plain_output(result)
+    assert not target.exists()
+
+
+def test_output_file_dry_run_reports_exact_destination_without_writing(tmp_path):
+    source = photo(tmp_path / "source.jpg")
+    target = tmp_path / "cards" / "renamed.jpg"
+
+    result = runner.invoke(app, ["render", str(source), "--output-file", str(target), "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert "".join(str(target).split()) in "".join(plain_output(result).split())
+    assert not target.exists()
+
+
 class _ok:
     returncode = 0

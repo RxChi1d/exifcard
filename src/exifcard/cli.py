@@ -95,6 +95,14 @@ def render_cards(
     out: Annotated[
         Path | None, typer.Option("--out", help="Output root. Defaults to ./outputs.", rich_help_panel=IO_PANEL)
     ] = None,
+    output_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-file",
+            help="Exact output file path for one photo. The format is inferred from its extension.",
+            rich_help_panel=IO_PANEL,
+        ),
+    ] = None,
     recursive: Annotated[
         bool, typer.Option("--recursive", help="Descend into subdirectories.", rich_help_panel=IO_PANEL)
     ] = False,
@@ -111,7 +119,14 @@ def render_cards(
     ] = False,
     fmt: Annotated[
         str | None,
-        typer.Option("--format", help="Output format. Defaults to the input's format.", rich_help_panel=ENCODE_PANEL),
+        typer.Option(
+            "--format",
+            help=(
+                "Output format. Defaults to the input's format, or the "
+                "--output-file extension when set."
+            ),
+            rich_help_panel=ENCODE_PANEL,
+        ),
     ] = None,
     quality: Annotated[
         int | None, typer.Option("--quality", help=QUALITY_HELP, rich_help_panel=ENCODE_PANEL)
@@ -167,6 +182,22 @@ def render_cards(
 
     if fmt and fmt not in encode.FORMATS:
         raise typer.BadParameter(f"--format must be one of {', '.join(encode.FORMATS)}")
+    if out is not None and output_file is not None:
+        raise typer.BadParameter("--out and --output-file cannot be used together")
+    if output_file is not None:
+        output_file = output_file.expanduser()
+        output_format = encode.format_for(output_file)
+        if output_format is None:
+            raise typer.BadParameter(
+                "--output-file must use a supported extension: .jpg, .jpeg, .png, .heic or .heif"
+            )
+        if fmt is None:
+            fmt = output_format
+        elif fmt != output_format:
+            raise typer.BadParameter(
+                f"--format {fmt} does not match the --output-file extension ({output_format})"
+            )
+
     if exif_mode not in ("all", "safe", "none"):
         raise typer.BadParameter("--exif must be all, safe or none")
     frame = frame or cfg.frame
@@ -204,16 +235,31 @@ def render_cards(
     if not photos:
         err.print("[yellow]No photos found.[/]")
         raise typer.Exit(1)
+    if output_file is not None:
+        if len(photos) != 1:
+            raise typer.BadParameter(
+                "--output-file requires exactly one photo; use --out for batch rendering"
+            )
+        if output_file.exists() and output_file.samefile(photos[0]):
+            raise typer.BadParameter("--output-file must not overwrite the source photo")
 
     # Each photo's output folder comes from its own source folder, so passing
     # two albums in one run does not funnel one of them into a directory named
     # after the other -- and their same-numbered files do not collide.
     out_root = out or Path(cfg.out)
-    out_dirs = {photo: _output_dir(photo, roots[photo], out_root) for photo in photos}
+    if output_file is None:
+        out_dirs = {photo: _output_dir(photo, roots[photo], out_root) for photo in photos}
+    else:
+        out_dirs = {photo: output_file.parent for photo in photos}
     caption_files = {
         directory: locations.load(locations_file or directory / locations.FILENAME)
         for directory in set(out_dirs.values())
     }
+
+    def destination_for(photo: Path, out_dir: Path) -> Path:
+        if output_file is not None:
+            return output_file
+        return render.plan_destination(photo, out_dir, render.resolve_format(photo, fmt))
 
     options = render.Options(
         frame=frame,
@@ -233,7 +279,7 @@ def render_cards(
         console.print(f"[bold]{len(photos)}[/] photo(s)")
         for photo in photos:
             out_dir = out_dirs[photo]
-            target = render.plan_destination(photo, out_dir, render.resolve_format(photo, fmt))
+            target = destination_for(photo, out_dir)
             status = "[yellow]exists[/]" if target.exists() else "new"
             caption = caption_files[out_dir].get(photo.name) or location or ""
             console.print(f"  {photo.name:24} -> {target}  {status}  {caption}")
@@ -254,9 +300,7 @@ def render_cards(
         task = progress.add_task("Rendering", total=len(photos))
         for photo in photos:
             out_dir = out_dirs[photo]
-            target = render.plan_destination(
-                photo, out_dir, render.resolve_format(photo, fmt)
-            )
+            target = destination_for(photo, out_dir)
             if not _resolve_overwrite(target, overwrite_state):
                 skipped += 1
                 progress.advance(task)
@@ -283,7 +327,11 @@ def render_cards(
                 err.print(f"  [yellow]{photo.name}: {note}[/]")
             progress.advance(task)
 
-    destinations = ", ".join(str(d) for d in sorted(set(out_dirs.values())))
+    destinations = (
+        str(output_file)
+        if output_file is not None
+        else ", ".join(str(d) for d in sorted(set(out_dirs.values())))
+    )
     summary = f"[green]{written}[/] written, {skipped} skipped"
     if failures:
         summary += f", [red]{len(failures)} failed[/]"
