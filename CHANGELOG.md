@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A photo cropped in Lightroom prints the 35mm equivalent of what the crop kept, rather than the camera's value for the whole frame. The crop is read from the Camera Raw settings in the photo's XMP (`crs:HasCrop`, `CropLeft/Top/Right/Bottom`, `CropAngle`), straightening included, and the corrected number is printed in the same place with no mark. Only the equivalent is corrected; a photo without one keeps its physical focal length. A crop is not applied after Upright, a perspective slider, or a distortion correction, or on a portrait export whose two possible orientations disagree; the run then says so and the camera's value stays.
+
 ## [0.2.0] - 2026-10-14
 
 ### Added

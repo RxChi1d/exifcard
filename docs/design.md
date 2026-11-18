@@ -189,7 +189,7 @@ The last row is what this rule costs: `Fushimi Inari, Kyoto` measures 208 agains
 
 The focal length on the card is the **35mm equivalent**, not the physical length engraved on the lens. Three steps, in order:
 
-1. `FocalLengthIn35mmFilm` if the camera recorded one.
+1. `FocalLengthIn35mmFilm` if the camera recorded one, narrowed by a Lightroom crop if the photo carries one ([below](#after-a-lightroom-crop)).
 2. `FocalLength` — the physical value — if it did not.
 3. Nothing at all if neither is present. Zero counts as absent at both steps: some bodies write it rather than leaving the tag out, which says the same thing, and no lens is 0mm.
 
@@ -204,6 +204,38 @@ IMG_4355.JPG          6.765mm             30mm
 Two different framings, one number. The sensor crop is what changed, and only the equivalent value carries it. The same applies less dramatically to any crop-sensor body: an X-E5 at 17mm frames like 26mm.
 
 Older DSLRs — a Canon EOS 700D, a Nikon D90 — omit the tag entirely, so those cards keep the physical value. That leaves two bases in use across a collection without the card saying which, and the alternative was rejected: marking the equivalent ones would put a symbol on modern bodies and not on old ones, drawing attention to a distinction most readers do not care about. The fallback is also what the card always showed, so no photo reads worse than it did before.
+
+### After a Lightroom crop
+
+`FocalLengthIn35mmFilm` is written by the camera, so it describes the frame as shot. Crop the photo in Lightroom and the angle of view narrows while the tag stays put: a 200mm frame trimmed by about 12% and straightened 1.36° frames like 226mm. When the photo's XMP carries a Camera Raw crop (`crs:HasCrop="True"`), the card prints the equivalent of what is left, in the same place and with no mark beside it — the same rule as an APS-C body's 1.5× already being folded into the tag.
+
+The crop record is two opposite corners of the straightened rectangle, `CropLeft/Top` and `CropRight/Bottom`, normalised on each axis to the original frame, plus `CropAngle` in degrees. The 35mm equivalent is defined on the diagonal, and straightening only turns the rectangle, so the kept share of the diagonal is the distance between those corners in original pixels over the original diagonal:
+
+```
+a  = W / H of the original frame
+r  = hypot(dx·a, dy) / hypot(a, 1)        dx = Right − Left,  dy = Bottom − Top
+equivalent after the crop = FocalLengthIn35mmFilm / r
+```
+
+The record does not say what `a` is, because each axis is normalised separately. The exported image does: it has the crop's own proportions `w × h`, and the corner-to-corner vector runs at `atan(h/w) + CropAngle` in original pixels, so `a = dy / (dx · tan(atan(h/w) + CropAngle))`. Measured on twelve cropped exports from two Sony full-frame bodies, angles from −0.08° to 1.36°:
+
+```
+                 output       angle   recovered a   camera   card
+DSC00091       6196×4131     1.36°      1.4999       200mm   226mm
+DSC00098       6808×4539     1.13°      1.4999       146mm   150mm
+DSC02539       4239×2826     0.26°      1.5000       300mm   326mm
+DSC02168       6475×4317     0°         1.4999       127mm   137mm
+DSC02469       6993×4662    −0.08°      1.5000       105mm   105mm
+```
+
+Every one comes out at the sensor's 3:2; with the angle's sign reversed DSC00091 implies 1.66:1, which no body has. Only proportions enter, never size, so an export downscaled to a long edge of 2048 gives the same number. All the samples had the lens profile on at its default amount, and the corners still land on the original frame.
+
+The camera value stands, deliberately, in these cases:
+
+- **No equivalent tag.** The card is then printing the physical length, a property of the lens that no crop changes.
+- **A geometric warp.** Upright, any perspective slider, a perspective scale other than 100, a lens-profile distortion amount other than 100, or manual distortion moves the crop off the original frame, so its share of the diagonal stops being its share of the angle of view. The run says the crop was not applied, giving the camera value it printed instead.
+- **A portrait export whose two readings disagree.** No sample settles whether Lightroom states a portrait crop against the sensor or against the turned frame. Both are computed — the turned one with either sign of the angle — and the crop applies only when every reading that implies a possible sensor prints the same millimetre. A crop that keeps the frame's shape always agrees; one that changes it may not, and the run says so.
+- **A record that cannot be a real crop**: corners out of order or off the frame, an angle beyond Lightroom's ±45°, or proportions outside 1:3 to 3:1. That is treated as no crop at all, with nothing reported, since there is nothing trustworthy to correct with.
 
 ## The signature
 
