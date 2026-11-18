@@ -159,7 +159,7 @@ Gear names appear exactly as EXIF reports them unless a table renames them, so a
 
 The card shows the camera brand logo, body model, lens brand (only when it differs from the body's), lens model, focal length, aperture, shutter speed, ISO, date, an optional location, and an optional handwritten signature.
 
-**Focal length is the 35mm equivalent**, not the number on the lens barrel. An X-E5 at 17mm prints `26mm`, and an iPhone prints `23mm` rather than `2mm`. Cameras that do not record an equivalent, mostly older DSLRs, fall back to the physical value. A photo that carries neither simply has no focal length on it. ([Why](docs/design.md#focal-length).)
+**Focal length is the 35mm equivalent**, not the number on the lens barrel. An X-E5 at 17mm prints `26mm`, and an iPhone prints `23mm` rather than `2mm`. Cameras that do not record an equivalent, mostly older DSLRs, fall back to the physical value. A photo that carries neither simply has no focal length on it. A photo cropped in Lightroom prints the equivalent of what the crop kept: a 200mm frame trimmed by about 12% prints `226mm`, read from the Camera Raw crop in its XMP and printed with no mark beside it. When a perspective or distortion correction makes the crop impossible to measure, the camera's value stays and the run says so. ([Why](docs/design.md#focal-length), [the crop](docs/design.md#after-a-lightroom-crop).)
 
 Anything EXIF does not supply is left out. A manual lens reports no aperture, so the readout has one fewer value. Nothing is ever replaced with `Unknown` or a dash, and the strip keeps its height either way.
 
