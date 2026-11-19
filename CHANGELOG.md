@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-19
+
+### Changed
+
+- Pillow is locked at 13.0.0, up from 12.3.0. The supported range is unchanged (`pillow>=12.0.0`), and the locked `pillow-heif` 1.8.1 works with both. The whole suite, the HEIC tests and the byte-for-byte pixel comparisons included, passes on Linux, macOS and Windows under Python 3.14 and 3.15.
+
 ## [0.3.0] - 2026-11-19
 
 ### Changed
@@ -44,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fonts and brand marks ship with the package and no system font is consulted, so a card renders identically on macOS, Linux, and Windows. All three run in CI.
 - An Agent Skill at `skills/exifcard/`, which a coding agent can install with `npx skills add RxChi1d/exifcard`. It carries what `--help` cannot: a run that warns still writes the card and exits zero, `--dry-run` renders nothing and so predicts no failure, `--exif` keeps the source GPS by default, and a caption is the user's words rather than the agent's to edit.
 
-[Unreleased]: https://github.com/RxChi1d/exifcard/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/RxChi1d/exifcard/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/RxChi1d/exifcard/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/RxChi1d/exifcard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/RxChi1d/exifcard/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/RxChi1d/exifcard/releases/tag/v0.1.0
