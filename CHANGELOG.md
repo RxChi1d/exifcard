@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-19
+
 ### Changed
 
 - A photo cropped in Lightroom prints the 35mm equivalent of what the crop kept, rather than the camera's value for the whole frame. The crop is read from the Camera Raw settings in the photo's XMP (`crs:HasCrop`, `CropLeft/Top/Right/Bottom`, `CropAngle`), straightening included, and the corrected number is printed in the same place with no mark. Only the equivalent is corrected; a photo without one keeps its physical focal length. A crop is not applied after Upright, a perspective slider, or a distortion correction, or on a portrait export whose two possible orientations disagree; the run then says so and the camera's value stays.
@@ -42,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fonts and brand marks ship with the package and no system font is consulted, so a card renders identically on macOS, Linux, and Windows. All three run in CI.
 - An Agent Skill at `skills/exifcard/`, which a coding agent can install with `npx skills add RxChi1d/exifcard`. It carries what `--help` cannot: a run that warns still writes the card and exits zero, `--dry-run` renders nothing and so predicts no failure, `--exif` keeps the source GPS by default, and a caption is the user's words rather than the agent's to edit.
 
-[Unreleased]: https://github.com/RxChi1d/exifcard/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/RxChi1d/exifcard/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/RxChi1d/exifcard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/RxChi1d/exifcard/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/RxChi1d/exifcard/releases/tag/v0.1.0
