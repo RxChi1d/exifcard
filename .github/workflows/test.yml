@@ -7,22 +7,26 @@ on:
 
 jobs:
   test:
+    # Branch protection requires the checks by name: "test (<os>)". The 3.14
+    # jobs keep exactly that name so they stay the required gate; the 3.15
+    # jobs are named apart and run alongside without being required.
+    name: test (${{ matrix.os }}${{ matrix.python != '3.14' && format(', {0}', matrix.python) || '' }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        # Stated outright rather than left to each runner image, which moves
+        # on its own schedule: macOS jumped to 3.15 while Linux stayed on 3.14,
+        # and the same commit passed on one and failed to install on the other.
+        python: ["3.14", "3.15"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
-      # Pinned rather than left to whatever the runner image ships. macOS
-      # runners moved to Python 3.15, for which the locked pillow-heif has no
-      # wheel, so `uv sync --locked` tried to compile it and failed before any
-      # test ran. 3.14 is what the project is developed and run on.
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          python-version: "3.14"
+          python-version: ${{ matrix.python }}
 
       - run: uv sync --locked
 
