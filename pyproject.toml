@@ -1,6 +1,6 @@
 [project]
 name = "exifcard"
-version = "0.3.0"
+version = "0.3.1"
 description = "Local CLI tool that renders a photo and its EXIF metadata into a finished card image"
 readme = "README.md"
 license = { file = "LICENSE" }
